@@ -15,8 +15,8 @@ async function session(stored, original = {}) {
   await window.kaiAssistantPreferencesReady; await new Promise(setImmediate);
   return { writes, errors, localStorage, listeners, flush: () => new Promise(setImmediate) };
 }
-test("Assistant migrates original choices, persists changes and restores them in a fresh plugin window", async () => {
-  const first = await session(null, { "kai-chat-mode": "research", "kai-chat-source": "openai", "kai-chat-model-openai": "desktop:openai:example" });
+test("Assistant persists its own choices and restores them in a fresh plugin window", async () => {
+  const first = await session({ "kai-chat-mode": "research", "kai-chat-source": "openai", "kai-chat-model-openai": "desktop:openai:example" });
   assert.equal(first.localStorage.getItem("kai-chat-mode"), "research");
   first.localStorage.setItem("kai-chat-mode", "chat"); first.localStorage.setItem("kai-credit-paid-first", "true"); await first.flush();
   const second = await session(first.writes.at(-1), { "kai-chat-mode": "research" });

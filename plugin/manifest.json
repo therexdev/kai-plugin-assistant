@@ -1,22 +1,42 @@
 {
-  "schema": 1,
-  "apiVersion": 2,
+  "schema": 2,
+  "apiVersion": 3,
   "id": "kai.assistant",
   "name": "KAI Assistant",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "The original KAI chat workspace, advanced agents and research, desktop providers, voice and animated desktop companion.",
   "entry": "index.html",
   "permissions": [
+    "native.execute",
     "models.read",
+    "models.manage",
     "inference.local",
+    "inference.network",
+    "network.status",
+    "network.fetch",
+    "network.configure",
     "storage.read",
     "storage.write",
-    "assistant.read",
-    "assistant.write",
-    "assistant.chat",
-    "assistant.native",
-    "assistant.network",
-    "assistant.media",
-    "desktop.preferences"
+    "desktop.media",
+    "desktop.windows",
+    "desktop.external",
+    "desktop.navigate",
+    "desktop.preferences",
+    "secrets.use",
+    "wallet.read",
+    "wallet.authorize",
+    "services.call",
+    "services.provide"
+  ],
+  "runtime": "native",
+  "service": "service/index.js",
+  "provides": [
+    "kai.assistant"
+  ],
+  "consumes": [
+    "kai.brain",
+    "kai.connections",
+    "kai.workflows",
+    "kai.tools"
   ]
 }

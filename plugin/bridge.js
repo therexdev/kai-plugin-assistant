@@ -1,6 +1,6 @@
 "use strict";
-// Only the reviewed Assistant API is exposed. All networking, credentials,
-// private actions and native permissions remain in the Core process.
+// The sandboxed UI talks only to its own installed Assistant service.
+// Assistant owns providers, conversations, speech and desktop controls.
 (() => {
   const keys = ["kai-chat-mode", "kai-chat-source", "kai-web-search", "kai-credit-model", "kai-credit-paid-first", "kai-interface-language", "kai-chat-model-openai", "kai-chat-model-anthropic"];
   const originalSet = Storage.prototype.setItem, originalRemove = Storage.prototype.removeItem;
@@ -15,13 +15,10 @@
   };
   Storage.prototype.setItem = function(key, value) { originalSet.call(this, key, value); if (this === localStorage && preferencesReady && keys.includes(String(key))) persistPreferences(); };
   Storage.prototype.removeItem = function(key) { originalRemove.call(this, key); if (this === localStorage && preferencesReady && keys.includes(String(key))) persistPreferences(); };
-  window.kaiAssistantPreferencesReady = Promise.all([
-    window.kai.call("storage.get", { key: "original-ui-preferences" }),
-    window.kai.call("desktop.preferencesRead", { keys }).catch(() => ({})),
-  ]).then(([stored, original]) => {
+  window.kaiAssistantPreferencesReady = window.kai.call("storage.get", { key: "original-ui-preferences" }).then(stored => {
     if (stored !== null && (!stored || typeof stored !== "object" || Array.isArray(stored))) throw Error("Saved Assistant preferences are unreadable; they were not replaced.");
     for (const key of keys) {
-      const value = typeof stored?.[key] === "string" ? stored[key] : original[key];
+      const value = typeof stored?.[key] === "string" ? stored[key] : undefined;
       if (typeof value === "string") originalSet.call(localStorage, key, value);
     }
     preferencesReady = true; persistPreferences();

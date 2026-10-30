@@ -1,0 +1,143 @@
+/* Shared KAI rig. CSS motion only: no canvas loop, remote art or inference. */
+.kai-character{display:block;width:100%;height:100%;overflow:visible}
+.kai3d-body{transform-origin:512px 1350px;animation:kai3d-breathe 4.8s ease-in-out infinite}
+.kai3d-head{transform-origin:512px 665px;transition:transform .38s ease-in-out}
+.kai3d-head-motion{transform-origin:512px 665px;animation:kai3d-look 12s ease-in-out infinite}
+.kai3d-gaze{transform:translate(calc(var(--gaze-x,0px) * 3),calc(var(--gaze-y,0px) * 3));transition:transform .3s ease-out}
+.kai3d-eyes{transform-origin:512px 410px;animation:kai3d-blink 6.1s infinite}
+.kai3d-brows{opacity:.8}
+.kai3d-attentive,.kai3d-mouth,.kai3d-thought,.kai3d-listen{opacity:0}
+.kai3d-mouth{transform-origin:512px 534px}
+.kai3d-shadow{transform-origin:512px 1415px;animation:kai3d-ground 4.8s ease-in-out infinite}
+body[data-state=listening] .kai3d-head-motion{animation:kai3d-listening 3s ease-in-out infinite}
+body[data-state=listening] .kai3d-happy,body[data-state=thinking] .kai3d-happy,body[data-state=transcribing] .kai3d-happy{opacity:0}
+body[data-state=listening] .kai3d-attentive,body[data-state=thinking] .kai3d-attentive,body[data-state=transcribing] .kai3d-attentive{opacity:1}
+body[data-state=listening] .kai3d-listen{animation:kai3d-signal 1s ease-in-out infinite}
+body:is([data-state=thinking],[data-state=transcribing],[data-state=voicing],[data-state=searching]) .kai3d-head{transform:rotate(5deg)}
+body:is([data-state=thinking],[data-state=transcribing],[data-state=voicing],[data-state=searching]) .kai3d-head-motion{animation:kai-busy-nod 3s ease-in-out infinite}
+body[data-state=thinking] .kai3d-gaze{transform:translate(17px,-12px)}
+body[data-state=thinking] .kai3d-smile,body[data-state=transcribing] .kai3d-smile{opacity:0}
+body[data-state=thinking] .kai3d-thought,body[data-state=transcribing] .kai3d-thought{opacity:1}
+.kai3d-thought circle{animation:kai3d-dot 1.2s ease-in-out infinite}
+.kai3d-thought circle:nth-child(2){animation-delay:.15s}.kai3d-thought circle:nth-child(3){animation-delay:.3s}
+body[data-state=speaking] .kai3d-head-motion{animation:kai3d-talk 1.4s ease-in-out infinite}
+body[data-state=speaking] .kai3d-smile{opacity:0}
+body[data-state=speaking] .kai3d-mouth{opacity:1;animation:kai3d-speech .31s ease-in-out infinite alternate}
+/* Buffering pauses close the mouth without restarting the arm/head timeline. */
+body[data-state=speaking][data-audible=false] .kai3d-mouth{opacity:0;animation-play-state:paused}
+body[data-state=speaking][data-audible=false] .kai3d-smile{opacity:1}
+body[data-state=error] .kai3d-head-motion{animation:kai3d-ponder 3s ease-in-out infinite}
+body[data-state=error] .kai3d-brows{transform:rotate(-7deg);transform-origin:512px 280px}
+body.waving .kai3d-head-motion{animation:kai3d-hello 2.4s ease-in-out}
+body.waving .kai3d-body{animation:kai3d-bounce 2.4s ease-in-out}
+body.asleep .kai3d-eyes{animation:none;transform:scaleY(.12)}
+body.asleep .kai3d-head-motion{animation:none;transform:rotate(5deg)}
+body.asleep .kai3d-body{animation-duration:7s}
+body.motion-off .kai-character *,body.suspended .kai-character *{animation:none!important;transition:none!important}
+body.motion-off .kai3d-gaze,body.suspended .kai3d-gaze{transform:none}
+.kai-avatar .kai-character *{animation:none!important;transform:none!important}
+@keyframes kai3d-breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
+@keyframes kai3d-ground{0%,100%{opacity:.8;transform:scaleX(1)}50%{opacity:.55;transform:scaleX(.92)}}
+@keyframes kai3d-look{0%,24%,52%,100%{transform:rotate(0)}32%,42%{transform:rotate(-3deg)}72%,83%{transform:rotate(3deg)}}
+@keyframes kai3d-blink{0%,38%,42%,70%,74%,100%{transform:scaleY(1)}40%,72%{transform:scaleY(.08)}}
+@keyframes kai3d-listening{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(-3deg) translateY(-7px)}}
+@keyframes kai3d-signal{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes kai3d-ponder{0%,100%{transform:rotate(5deg)}50%{transform:rotate(7deg) translateY(-6px)}}
+@keyframes kai3d-dot{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes kai3d-talk{0%,100%{transform:rotate(-1deg)}50%{transform:rotate(1deg) translateY(5px)}}
+@keyframes kai3d-speech{from{transform:scale(.85,.22)}to{transform:scale(1,1)}}
+@keyframes kai3d-hello{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-6deg)}40%,80%{transform:rotate(5deg)}}
+@keyframes kai3d-bounce{0%,100%{transform:translateY(0)}25%,65%{transform:translateY(-32px)}45%,85%{transform:translateY(-8px)}}
+@media(prefers-reduced-motion:reduce){.kai-character *{animation:none!important;transition:none!important}.kai3d-gaze{transform:none}}
+
+.kai-avatar .kai-character{overflow:hidden}
+
+/* Articulated limbs and activity props. Every layer reuses the local texture. */
+.kai3d-puppet{transform-origin:512px 170px;transition:transform .12s ease-out}
+.kai3d-cape{transform-origin:512px 722px;animation:kai-cape-drift 4s ease-in-out infinite}
+.kai3d-arm-left{transform-origin:335px 758px}.kai3d-arm-right{transform-origin:689px 758px}
+.kai3d-forearm-left{transform-origin:260px 850px}.kai3d-forearm-right{transform-origin:764px 850px}
+.kai3d-leg-left{transform-origin:402px 1025px}.kai3d-leg-right{transform-origin:622px 1025px}
+.kai3d-shin-left{transform-origin:375px 1150px}.kai3d-shin-right{transform-origin:649px 1150px}
+.kai3d-arm,.kai3d-forearm,.kai3d-leg,.kai3d-shin{transition:transform .3s ease-out}
+.kai3d-arm-left{transform:rotate(0)}.kai3d-arm-right{animation:kai-arm-rest 4.8s ease-in-out infinite reverse}
+.kai3d-search-props,.kai3d-thinking-props,.kai3d-ledge,.kai3d-surprise{opacity:0;pointer-events:none}
+.kai3d-question-prop{transform-origin:865px 260px}.kai3d-idea-prop{opacity:0;transform-origin:887px 262px}
+body:is([data-state=thinking],[data-state=transcribing],[data-state=voicing],[data-state=searching]) .kai3d-arm-left{transform:rotate(-30deg)}
+body:is([data-state=thinking],[data-state=transcribing],[data-state=voicing],[data-state=searching]) .kai3d-forearm-left{transform:rotate(-157deg)}
+body[data-state=thinking] .kai3d-thinking-props,body[data-state=transcribing] .kai3d-thinking-props,body[data-state=voicing] .kai3d-thinking-props{opacity:1}
+body[data-state=thinking] .kai3d-question-prop,body[data-state=transcribing] .kai3d-question-prop,body[data-state=voicing] .kai3d-question-prop{animation:kai-question 5.2s ease-in-out infinite}
+body[data-state=thinking] .kai3d-idea-prop,body[data-state=transcribing] .kai3d-idea-prop,body[data-state=voicing] .kai3d-idea-prop{animation:kai-idea 5.2s ease-in-out infinite}
+body[data-state=searching] .kai3d-search-props{opacity:1}
+body[data-state=searching] .kai3d-magnifier{transform-origin:419px 707px;animation:kai-search-scan 2.6s ease-in-out infinite}
+body[data-state=searching] .kai3d-page-one{animation:kai-page-float 2.6s ease-in-out infinite}
+body[data-state=searching] .kai3d-page-two{animation:kai-page-float 2.6s ease-in-out infinite reverse}
+body[data-state=speaking] .kai3d-arm-right{animation:kai-talk-gesture 2.8s ease-in-out infinite}
+body[data-state=speaking] .kai3d-forearm-right{animation:kai-talk-hand 2.8s ease-in-out infinite}
+body[data-state=listening] .kai3d-arm-right{animation:none;transform:rotate(13deg)}
+body[data-state=listening] .kai3d-forearm-right{transform:rotate(32deg)}
+/* The desktop edge is an actual resting pose; the feet are tucked away. */
+body[data-pose=perched] .kai3d-body{animation:none;transform:translateY(430px)}
+body[data-pose=perched] .kai3d-leg,body[data-pose=perched] .kai3d-shadow{opacity:0}
+body[data-pose=perched] .kai3d-ledge{opacity:1}
+body[data-pose=perched] .kai3d-cape{animation:none;transform:scaleX(.91)}
+body[data-pose=perched]:is([data-state=idle],[data-state=listening]) .kai3d-arm{animation:none;transform:none}
+body[data-pose=perched]:is([data-state=idle],[data-state=listening]) .kai3d-forearm-left{transform:rotate(-65deg)}
+body[data-pose=perched]:is([data-state=idle],[data-state=listening]) .kai3d-forearm-right{transform:rotate(65deg)}
+/* Pickup always wins over a timed greeting or a thinking/talking body pose. */
+body[data-pose=carried] .kai3d-puppet{transform:rotate(var(--carry-tilt,0deg))}
+body[data-pose=carried] .kai3d-body{transform-origin:512px 170px;animation:kai-dangle .95s ease-in-out infinite}
+body[data-pose=carried] .kai3d-head-motion{animation:none;transform:rotate(-2deg)}
+body[data-pose=carried] .kai3d-arm-left{animation:kai-dangle-arm .8s ease-in-out infinite}
+body[data-pose=carried] .kai3d-arm-right{animation:kai-dangle-arm-right .8s ease-in-out infinite}
+body[data-pose=carried] .kai3d-forearm{animation:none;transform:none}
+body[data-pose=carried] .kai3d-leg-left{animation:kai-dangle-leg .95s ease-in-out infinite}
+body[data-pose=carried] .kai3d-leg-right{animation:kai-dangle-leg .95s ease-in-out infinite reverse}
+body[data-pose=carried] .kai3d-shin-left{transform:rotate(-9deg)}
+body[data-pose=carried] .kai3d-shin-right{transform:rotate(9deg)}
+body[data-pose=carried] .kai3d-cape{animation:kai-cape-dangle .95s ease-in-out infinite}
+body[data-pose=carried] .kai3d-shadow,body[data-pose=carried] .kai3d-search-props,body[data-pose=carried] .kai3d-thinking-props{opacity:0}
+body[data-pose=carried] .kai3d-happy{opacity:0}body[data-pose=carried] .kai3d-attentive{opacity:1}
+body[data-pose=carried]:not([data-state=speaking]) .kai3d-smile,body[data-pose=carried] .kai3d-thought{opacity:0}
+body[data-pose=carried]:not([data-state=speaking]) .kai3d-surprise{opacity:1}
+body.landing[data-pose=free] .kai3d-puppet{transform-origin:512px 1400px;animation:kai-soft-landing .65s ease-out}
+body.landing[data-pose=perched] .kai3d-head-motion{animation:kai-perch-settle .65s ease-out}
+body.landing .kai3d-shadow{animation:kai-shadow-settle .65s ease-out}
+@keyframes kai-cape-drift{0%,100%{transform:skewX(-1deg)}50%{transform:skewX(1.5deg)}}
+@keyframes kai-arm-rest{0%,100%{transform:rotate(0)}50%{transform:rotate(2deg)}}
+@keyframes kai-busy-nod{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes kai-question{0%,8%{opacity:0}18%,55%{opacity:1}65%,100%{opacity:0}}
+@keyframes kai-idea{0%,62%,100%{opacity:0;transform:scale(.85)}72%,88%{opacity:1;transform:scale(1)}}
+@keyframes kai-search-scan{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+@keyframes kai-page-float{0%,100%{transform:translateY(12px);opacity:.5}50%{transform:translateY(-25px);opacity:1}}
+@keyframes kai-talk-gesture{0%,100%{transform:rotate(0)}35%,60%{transform:rotate(-22deg)}}
+@keyframes kai-talk-hand{0%,100%{transform:rotate(0)}35%,60%{transform:rotate(50deg)}}
+@keyframes kai-wave-arm{0%,100%{transform:rotate(0)}22%,78%{transform:rotate(55deg)}}
+@keyframes kai-wave-hand{0%,100%{transform:rotate(0)}22%,52%,78%{transform:rotate(55deg)}37%,67%{transform:rotate(77deg)}}
+@keyframes kai-dangle{0%,100%{transform:rotate(-1.5deg) translateY(8px)}50%{transform:rotate(1.5deg) translateY(15px)}}
+@keyframes kai-dangle-arm{0%,100%{transform:rotate(-24deg)}50%{transform:rotate(-38deg)}}
+@keyframes kai-dangle-arm-right{0%,100%{transform:rotate(38deg)}50%{transform:rotate(24deg)}}
+@keyframes kai-dangle-leg{0%,100%{transform:rotate(-9deg)}50%{transform:rotate(7deg)}}
+@keyframes kai-cape-dangle{0%,100%{transform:scaleX(.85) skewX(-3deg)}50%{transform:scaleX(.92) skewX(3deg)}}
+@keyframes kai-soft-landing{0%{transform:translateY(-18px) scale(.97,1.03)}25%{transform:translateY(9px) scale(1.05,.92)}58%{transform:translateY(-6px) scale(.99,1.01)}100%{transform:none}}
+@keyframes kai-perch-settle{0%{transform:translateY(-30px) rotate(-4deg)}35%{transform:translateY(14px) rotate(2deg)}100%{transform:none}}
+@keyframes kai-shadow-settle{0%{transform:scaleX(.65);opacity:.3}35%{transform:scaleX(1.12);opacity:1}100%{transform:scaleX(1);opacity:.8}}
+body.motion-off .kai3d-puppet,body.suspended .kai3d-puppet{transform:none!important}
+body.motion-off:is([data-state=thinking],[data-state=transcribing],[data-state=voicing]) .kai3d-arm-left{transform:rotate(-30deg)}
+body.motion-off .kai3d-question-prop{opacity:1}
+@media(prefers-reduced-motion:reduce){.kai3d-puppet{transform:none!important}body:is([data-state=thinking],[data-state=transcribing],[data-state=voicing]) .kai3d-arm-left{transform:rotate(-30deg)}}
+
+/* A forward-facing palm and a bent elbow; the shoulder never flips over. */
+.kai3d-wave-forearm{opacity:0;pointer-events:none}
+body.waving:not([data-pose=carried]) .kai3d-arm-left{animation:kai-wave-arm 2.4s ease-in-out}
+body.waving:not([data-pose=carried]) .kai3d-forearm-left{animation:kai-wave-hand 2.4s ease-in-out}
+body.waving:not([data-pose=carried]) .kai3d-forearm-left>image{animation:kai-wave-original 2.4s linear}
+body.waving:not([data-pose=carried]) .kai3d-wave-forearm{animation:kai-wave-palm 2.4s linear}
+@keyframes kai-wave-palm{0%,14%,90%,100%{opacity:0}20%,84%{opacity:1}}
+@keyframes kai-wave-original{0%,14%,90%,100%{opacity:1}20%,84%{opacity:0}}
+
+/* Raised hands have their own curled glove, with knuckles toward the viewer. */
+.kai3d-curled-forearm{opacity:0;pointer-events:none}
+body:not([data-pose=carried]):not(.waving):is([data-state=thinking],[data-state=transcribing],[data-state=voicing],[data-state=searching]) .kai3d-curled-forearm{opacity:1}
+body:not([data-pose=carried]):not(.waving):is([data-state=thinking],[data-state=transcribing],[data-state=voicing],[data-state=searching]) .kai3d-forearm-left>image{opacity:0}
+body[data-pose=carried] .kai3d-head{transform:none}

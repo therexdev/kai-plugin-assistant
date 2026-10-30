@@ -1,1 +1,7 @@
-This is a signed sandboxed KAI Core plugin. Never put secrets or publisher private keys in this repository. Renderer code uses window.kai.call only; host privilege belongs in reviewed Core brokers. Preserve legacy data and never silently overwrite unreadable records. Follow root deployment instructions.
+This repository owns KAI Assistant's UI, native service, conversation data, provider credentials, desktop companion, speech engines, assets and build dependencies. Foundation provides only documented public primitives; never import another repository, Core internals, or a shared CompanionHub at runtime.
+
+- Native runtime is explicitly trusted full computer/application access. Do not describe it as an adversarial sandbox or promise it cannot access local files. Keep every renderer sandboxed and retain exact sender/main-frame checks and native action approval.
+- Cross-plugin data access uses declared service RPC and explicit user grants. Remote/rented jobs cannot invoke local services. Brain/accounts/workflow definitions remain owned by their plugins.
+- Use a fresh plugin-scoped data directory. Do not read, migrate or delete the old application profile. Corrupt records must never be silently replaced.
+- Never put private signing keys or real credentials in this repository. Build dependencies in CI with the lockfile and integrity checks; never run npm or package scripts on the user's machine.
+- `npm test` and the native smoke are required. Universal payload CI must pass, then a reviewer signs the exact unsigned artifact externally. Only a verified detached signature can be attached for a manual release. Never commit large generated dependencies or unsigned packages as installable releases.

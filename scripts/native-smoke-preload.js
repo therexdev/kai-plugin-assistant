@@ -1,0 +1,3 @@
+"use strict";
+const { contextBridge, ipcRenderer } = require("electron");
+contextBridge.exposeInMainWorld("kai", { call: (method, input) => ipcRenderer.invoke("assistant-smoke:call", method, input), onEvent: (channel, callback) => { const handler = (_event, payload) => callback(payload); ipcRenderer.on(channel, handler); return () => ipcRenderer.removeListener(channel, handler); } });

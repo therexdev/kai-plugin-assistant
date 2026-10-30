@@ -1,9 +1,27 @@
 {
   "name": "kai-plugin-assistant",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "license": "MIT",
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "build:runtime": "node scripts/prepare-runtime.js",
+    "test:native": "electron scripts/native-smoke.js"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "3.5.1",
+    "kokoro-js": "1.2.1",
+    "phonemizer": "1.2.1",
+    "onnxruntime-node": "1.21.0",
+    "onnxruntime-web": "1.22.0-dev.20250409-89f8206ba4",
+    "sherpa-onnx-node": "1.13.7"
+  },
+  "devDependencies": {
+    "@ricky0123/vad-web": "0.0.29",
+    "electron": "43.8.3"
+  },
+  "overrides": {
+    "protobufjs": "7.6.6",
+    "sharp": "0.35.5"
   }
 }

@@ -1,0 +1,86 @@
+name: Build Assistant Foundation payload
+on:
+  push:
+    branches: [main, foundation-v1]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-helpers:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node scripts/build-windows-voice.js
+      - run: node scripts/build-windows-computer.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: assistant-windows-helpers
+          path: .build/windows-helpers/*.exe
+          if-no-files-found: error
+  assemble:
+    needs: windows-helpers
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - uses: actions/download-artifact@v4
+        with:
+          name: assistant-windows-helpers
+          path: .build/windows-helpers
+      - name: Assemble pinned production dependencies and native payloads
+        run: node --max-old-space-size=4096 scripts/prepare-runtime.js
+      - name: Build unsigned review artifact
+        run: node --max-old-space-size=4096 scripts/assemble-unsigned.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: assistant-unsigned-payload
+          path: |
+            .build/unsigned-plugin.json
+            .build/unsigned-metadata.json
+            .build/runtime-build.json
+          compression-level: 9
+          retention-days: 30
+          if-no-files-found: error
+  native-checks:
+    needs: assemble
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node node_modules/electron/install.js
+      - uses: actions/download-artifact@v4
+        with:
+          name: assistant-unsigned-payload
+          path: .build
+      - run: node --max-old-space-size=4096 scripts/extract-review-payload.js
+      - name: Check plugin-owned native dependencies
+        run: node scripts/verify-runtime.js
+      - name: Configure Linux sandbox
+        if: runner.os == 'Linux'
+        run: |
+          sudo chown root:root node_modules/electron/dist/chrome-sandbox
+          sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+      - name: Launch actual desktop companion (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:native
+      - name: Launch actual desktop companion (Windows and macOS)
+        if: runner.os != 'Linux'
+        run: npm run test:native

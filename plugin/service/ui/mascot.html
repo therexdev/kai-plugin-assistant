@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self'; img-src 'self' data:; media-src 'self' blob:; object-src 'none'; base-uri 'none'">
+  <title>KAI · Your desktop companion</title>
+  <link rel="stylesheet" href="mascot.css">
+  <link rel="stylesheet" href="kai-character.css">
+</head>
+<body data-state="idle">
+  <main id="companion" aria-label="KAI desktop companion">
+    <section id="conversation" class="interactive" aria-label="Talk with KAI" hidden>
+      <header class="chat-header">
+        <div class="kai-monogram" aria-hidden="true"></div>
+        <div class="chat-heading"><h1>KAI<span>DESKTOP COMPANION</span></h1><p id="connection">Connecting to your app…</p></div>
+        <button class="icon-button" id="new-chat" title="New conversation" aria-label="New conversation"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button class="icon-button" id="collapse" title="Keep KAI on the desktop" aria-label="Collapse conversation"><svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg></button>
+      </header>
+      <div class="model-row"><span class="status-light"></span><label for="model">Brain</label><select id="model" aria-label="Choose KAI's model"></select><button id="open-models" class="text-button">Manage</button></div>
+      <div class="companion-tools">
+        <button id="wake-toggle" aria-pressed="false" title="Enable local listening for Hey KAI"><span class="wake-light"></span><span id="wake-label">Hey KAI off</span></button>
+        <button id="voice-options" aria-expanded="false">Voice &amp; listening <span>⌄</span></button>
+        <button id="eyes-options" aria-expanded="false"><span class="eyes-light"></span>KAI Eyes <span>⌄</span></button>
+      </div>
+      <section id="voice-options-panel" aria-label="Voice and listening settings" hidden>
+        <div class="voice-options-heading"><strong>A little voice. A lot of personality.</strong><button id="close-voice-options" class="icon-button" aria-label="Close voice settings">×</button></div>
+        <label for="voice-choice">KAI's voice</label>
+        <select id="voice-choice"><option value="system">Computer voice</option></select>
+        <div id="pocket-controls" hidden>
+          <strong>Pocket voices · English</strong>
+          <p id="pocket-status" role="status">One download, about 201 MB. Speech stays on your computer.</p>
+          <div class="pocket-actions"><button id="setup-pocket" type="button">Download Pocket voices</button><button id="preview-pocket" type="button" hidden>Try Azelma</button></div>
+          <p id="pocket-metric" role="status" hidden></p>
+          <a href="pocket-credits.html" target="_blank" rel="noopener">Voice credits</a>
+        </div>
+        <p id="voice-engine-help"></p>
+        <div id="windows-voice-controls" hidden><button id="use-fast-voice" type="button">Use fast Cute KAI</button><button id="refresh-windows-voices" type="button">Refresh voices</button><button id="add-windows-voices" type="button">Add Windows voices ↗</button><p>Install speech voices in Windows Settings, then refresh this list. Available voices depend on your Windows installation.</p></div>
+        <label for="voice-tone" class="tone-label">Voice character</label>
+        <select id="voice-tone"><option value="cute">Cute KAI · bright &amp; squeaky</option><option value="kai">Classic KAI · deeper, softly robotic</option><option value="natural">Natural · original sound</option></select>
+        <div id="voice-squeak-control"><label for="voice-squeak" class="tone-label">Squeak <output id="voice-squeak-label" for="voice-squeak">Playful</output></label><input id="voice-squeak" type="range" min="5" max="12" step="1" value="9" aria-label="Voice squeak"><div class="squeak-scale"><span>Gentle</span><span>Extra squeaky</span></div></div>
+        <label for="speech-start" class="tone-label">Reply timing</label>
+        <select id="speech-start"><option value="quick">Quick start · first sentence</option><option value="smooth">Head start · two sentences</option><option value="complete">Whole reply · continuous playback</option></select>
+        <p id="speech-start-help"></p>
+        <div class="voice-option-actions"><button id="preview-voice">Hear a hello</button><button id="setup-natural">Get natural voices</button></div>
+        <p id="natural-status">Try Cute KAI with Bella. Hear a hello instantly, then download the local voice once for conversations.</p>
+        <div class="voice-divider"></div>
+        <strong>Just say “Hey KAI”</strong>
+        <p>Tap the mic and talk, or turn on Hey KAI and say your question. KAI listens for a finished thought before sending. Keep talking after KAI answers—you have a minute for follow-ups.</p>
+        <label for="turn-pause">Conversation pauses</label>
+        <select id="turn-pause"><option value="quick">Quick · short pauses</option><option value="natural" selected>Natural · room to pause</option><option value="patient">Patient · more time to think</option></select>
+        <p>KAI combines a quiet pause with local semantic turn detection, so a breath in the middle of a thought is less likely to cut you off. If it waits, keep talking or tap the mic to send now. Saying “KAI” during a reply still stops it as soon as the name is recognized.</p>
+        <label for="mic-sensitivity">Microphone sensitivity</label>
+        <select id="mic-sensitivity"><option value="tv">TV nearby · less sensitive</option><option value="balanced">Everyday room · balanced</option><option value="quiet">Quiet room · more sensitive</option></select>
+        <div class="mic-meter"><meter id="mic-level" min="0" max="1" value="0" aria-label="Microphone level"></meter><span id="mic-level-label">Microphone off</span></div>
+        <p id="listening-engine" class="muted" role="status">Local speech detection starts with the microphone.</p>
+        <p>With the mic on, background sound should stay below the listening level and your voice should rise above it. Move closer or choose a more sensitive setting if KAI misses you.</p>
+        <strong>Say “KAI” to interrupt</strong>
+        <p>While KAI is answering, say “KAI” on its own or “KAI” followed by your new question. It stops when it recognizes the name. After the reply, just keep talking—follow-ups need no name.</p>
+        <p class="muted">KAI does not identify your voice yet. Loud background dialogue can still sound like a question. The mic button always lets you stop a reply and ask directly.</p>
+        <p class="muted">The chat can stay closed. Say “That’s all” to end the conversation, or “Stop listening” to turn the mic off. Audio stays on this computer; accepted questions go to your selected chat model. Hiding KAI turns the mic off.</p>
+      </section>
+      <section id="eyes-options-panel" aria-label="KAI Eyes settings" hidden>
+        <div class="voice-options-heading"><strong>Let KAI see what you mean.</strong><button id="close-eyes-options" class="icon-button" aria-label="Close KAI Eyes settings">×</button></div>
+        <p>Screen and camera vision are session-only. KAI keeps six small frames in memory, attaches only the freshest view to a turn, and discards everything when you turn it off or hide KAI.</p>
+        <div class="eyes-source-grid">
+          <button id="screen-eyes" class="eyes-source" aria-pressed="false"><span class="eyes-source-icon" aria-hidden="true">▣</span><span><strong>Screen</strong><small>See the display KAI is sitting on</small></span><b>Off</b></button>
+          <button id="camera-eyes" class="eyes-source" aria-pressed="false"><span class="eyes-source-icon" aria-hidden="true">●</span><span><strong>Camera</strong><small>See what you choose to show KAI</small></span><b>Off</b></button>
+        </div>
+        <p id="eyes-status" role="status">Choose a vision-capable brain, then turn on a source.</p>
+        <p class="muted">A visible indicator stays on for the entire capture session. Frames never enter chat history or the Koinos Network. Local-Only still blocks private online models. Desktop clicks and typing remain a separate, per-task permission.</p>
+      </section>
+      <div id="transcript" role="log" aria-label="Conversation">
+        <div id="welcome">
+          <span class="eyebrow">A LITTLE ROBOT. A LOT OF HELP.</span>
+          <h2>Hey, I'm KAI<span>.</span></h2>
+          <p>Your app, a question away. Ask about your wallet, models, node, or the world outside.</p>
+          <div class="suggestions">
+            <button data-prompt="How much KAI have I earned, and what's still pending?"><span>01</span> Check my KAI earnings <b>↗</b></button>
+            <button data-prompt="What models are installed, and which can I install?"><span>02</span> Explore my models <b>↗</b></button>
+            <button data-prompt="Bring up my Pictures folder."><span>03</span> Open my Pictures folder <b>↗</b></button>
+          </div>
+        </div>
+        <div id="messages"></div>
+      </div>
+      <div id="notice" role="status" hidden></div>
+      <form id="composer">
+        <label class="sr-only" for="question">Your message to KAI</label>
+        <textarea id="question" rows="2" maxlength="12000" placeholder="Ask KAI anything…" autocomplete="off"></textarea>
+        <div class="composer-actions">
+          <button type="button" id="mic" class="icon-button" title="Talk to KAI" aria-label="Start voice input" aria-pressed="false"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 10v2a6 6 0 0 0 12 0v-2M12 18v3M9 21h6"/></svg></button>
+          <span id="composer-hint">Enter to send</span>
+          <button type="button" id="stop" class="send-button stop-button" aria-label="Stop response" hidden><svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1"/></svg></button>
+          <button type="submit" id="send" class="send-button" aria-label="Send message"><svg viewBox="0 0 24 24"><path d="m6 13 6-6 6 6M12 7v12"/></svg></button>
+        </div>
+      </form>
+      <footer class="chat-footer">
+        <button id="read-aloud" aria-pressed="false" title="Read KAI's replies aloud"><svg viewBox="0 0 24 24"><path d="m11 5-6 4H2v6h3l6 4ZM15 8c3 2 3 6 0 8M18 5c5 4 5 10 0 14"/></svg><span>Voice replies off</span></button>
+        <button id="main-app">Open full app <span>↗</span></button>
+      </footer>
+    </section>
+    <div id="mascot-stage">
+      <aside id="pocket-card" class="voice-card interactive" aria-label="Set up KAI's Pocket voice" hidden>
+        <strong id="pocket-card-title">Add KAI’s Pocket voice</strong><p id="pocket-card-copy" role="status"></p>
+        <button id="compact-pocket" type="button">Download Pocket voices</button><button id="later-pocket" class="text-button" type="button">Later</button>
+      </aside>
+      <aside id="natural-card" class="voice-card interactive" aria-label="Set up KAI's natural voice" hidden>
+        <strong>Meet KAI’s natural voice</strong><p id="natural-card-copy"></p>
+        <button id="compact-natural">Get natural voice</button><button id="later-natural" class="text-button">Later</button>
+      </aside>
+      <div id="voice-setup" class="voice-card interactive" hidden><strong>Let KAI hear you</strong><p id="voice-setup-copy"></p><button id="install-voice">Set up listening</button><button id="cancel-voice-setup" class="text-button">Later</button></div>
+      <aside id="compact-notice" class="interactive" role="status" hidden><button id="dismiss-compact-notice" aria-label="Dismiss message">×</button><span id="compact-notice-copy"></span></aside>
+      <button id="eyes-indicator" class="interactive" aria-label="KAI Eyes capture active" title="KAI Eyes is active · click to review" hidden><span class="capture-dot"></span><span id="eyes-indicator-copy">Screen on</span></button>
+      <div id="status-pill" class="interactive"><span></span><span id="mood-label">Here when you need me</span><button id="quick-stop" title="Stop response" aria-label="Stop response" hidden>■</button></div>
+      <button id="robot" class="interactive" aria-label="KAI. Click to chat, or drag to move." title="Click to chat · Drag to move"><span id="kai-art" aria-hidden="true"></span></button>
+      <div id="mascot-dock" class="interactive">
+        <button id="toggle-chat" title="Open chat" aria-label="Open or minimize chat" aria-expanded="false"><span class="dock-dot"></span><strong>KAI</strong><svg viewBox="0 0 24 24"><path d="M5 5h14v11H9l-4 4Z"/></svg></button>
+        <button id="quick-mic" class="icon-button" title="Talk to KAI" aria-label="Talk to KAI"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 10v2a6 6 0 0 0 12 0v-2M12 18v3"/></svg></button>
+        <button id="quick-wake" class="icon-button" title="Hey KAI listening off" aria-label="Toggle Hey KAI listening" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 10v4M8 6v12M12 3v18M16 6v12M20 10v4"/></svg></button>
+        <button id="mascot-menu-button" class="icon-button" title="KAI options" aria-label="KAI options" aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+      </div>
+      <div id="mascot-menu" class="interactive" hidden>
+        <button id="wave">Say hello 👋</button>
+        <button id="menu-voice">Voice &amp; listening</button>
+        <button id="menu-eyes">KAI Eyes</button>
+        <button id="menu-computer">Desktop control</button>
+        <button id="motion" aria-pressed="true">Animation on</button>
+        <button id="menu-open-app">Open full app ↗</button>
+        <button id="hide-mascot">Hide KAI to tray</button>
+      </div>
+    </div>
+  </main>
+  <script src="locales/catalogs.js"></script>
+  <script src="i18n.js"></script>
+  <script src="language-settings.js"></script>
+  <script src="markdown.js"></script>
+  <script src="audio-wav.js"></script>
+  <script src="mascot-client.js"></script>
+  <script src="agents.js"></script>
+  <script src="connection-profiles.js"></script>
+  <script src="companion-client.js"></script>
+  <script src="desktop-providers.js"></script>
+  <script src="app-navigation.js"></script>
+  <script src="computer-tools.js"></script>
+  <script src="mascot-tools.js"></script>
+  <script src="mascot-playback.js"></script>
+  <script src="mascot-speech.js"></script>
+  <script src="mascot-pocket.js"></script>
+  <script src="mascot-turn.js"></script>
+  <script src="mascot-vad.js"></script>
+  <script src="mascot-wake.js"></script>
+  <script src="mascot-live.js"></script>
+  <script src="mascot-eyes.js"></script>
+  <script src="mascot.js"></script>
+</body>
+</html>
