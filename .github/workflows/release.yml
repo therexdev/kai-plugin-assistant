@@ -1,0 +1,43 @@
+name: Verify and publish plugin
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: plugin-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm test
+      - name: Verify signature and exact source contents
+        run: node scripts/verify-package.js
+      - name: Publish immutable installable package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          version=$(node -p "require('./plugin/manifest.json').version")
+          tag="v$version"
+          asset=$(node -p "require('./package.json').name + '-' + require('./plugin/manifest.json').version + '.kaiplugin'")
+          if gh release view "$tag" >/dev/null 2>&1; then
+            mkdir -p "$RUNNER_TEMP/existing-release"
+            gh release download "$tag" --pattern "$asset" --dir "$RUNNER_TEMP/existing-release"
+            cmp "dist/$asset" "$RUNNER_TEMP/existing-release/$asset"
+            echo "Existing immutable release matches the verified package."
+          else
+            gh release create "$tag" "dist/$asset" --target "$GITHUB_SHA" --title "$(node -p "require('./plugin/manifest.json').name") $version" --notes-file RELEASE_NOTES.md
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signed-plugin
+          path: dist/*.kaiplugin
+          if-no-files-found: error
