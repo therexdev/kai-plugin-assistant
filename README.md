@@ -37,4 +37,4 @@ A reviewer downloads and signs that exact artifact outside CI. Commit only `rele
 
 For a local author-only build using already installed dependencies, `--deps /path/to/dependency-project --current-platform --offline` is available. The resulting package contains its own dependency files and never uses that path at runtime.
 
-`electron scripts/native-smoke.js` exercises the real desktop companion against `.build/plugin` with synthetic local models and a temporary profile. It does not test microphones, paid requests, external account actions, or Windows native automation on Linux.
+`npm run test:native` exercises the real desktop companion against `.build/plugin` with synthetic local models and a temporary profile. It does not test microphones, paid requests, external account actions, or Windows native automation on Linux.

@@ -1,6 +1,7 @@
 "use strict";
 const { app, BrowserWindow, ipcMain, protocol } = require("electron"), fs = require("node:fs"), path = require("node:path"), os = require("node:os"), assert = require("node:assert/strict");
-const root = path.resolve(process.env.KAI_ASSISTANT_SMOKE_ROOT || path.join(__dirname, "../.build/plugin")), profile = fs.mkdtempSync(path.join(os.tmpdir(), "kai-assistant-native-"));
+const root = path.resolve(process.env.KAI_ASSISTANT_SMOKE_ROOT || path.join(__dirname, "../.build/plugin")), profile = process.env.KAI_ASSISTANT_SMOKE_PROFILE;
+assert.ok(profile && fs.statSync(profile).isDirectory(), "Run this fixture through scripts/run-native-smoke.js");
 app.setPath("userData", profile); app.disableHardwareAcceleration();
 protocol.registerSchemesAsPrivileged([{ scheme: "kai-plugin", privileges: { standard: true, secure: true } }]);
 let service, win; const lifetime = new AbortController(), settings = new Map(), state = new Map();
@@ -26,5 +27,5 @@ app.whenReady().then(async () => {
   assert.ok((await mascot.webContents.executeJavaScript("document.querySelectorAll('script').length")) > 5);
   const response = await mascot.webContents.executeJavaScript("fetch('/core/models').then(r=>r.json())"); assert.equal(response.aliases[0].alias, "smoke-local");
   const canvas = await mascot.webContents.capturePage(); const output = process.env.KAI_ASSISTANT_SMOKE_OUTPUT || path.join(os.tmpdir(), "kai-assistant-foundation-smoke"); fs.mkdirSync(output, { recursive: true }); fs.writeFileSync(path.join(output, "companion.png"), canvas.toPNG()); fs.writeFileSync(path.join(output, "report.json"), JSON.stringify({ passed: true, status, root }, null, 2));
-  await service.dispose({ reason: "quit" }); lifetime.abort(); win.destroy(); fs.rmSync(profile, { recursive: true, force: true }); app.quit();
+  await service.dispose({ reason: "quit" }); lifetime.abort(); win.destroy(); app.quit();
 }).catch(async error => { console.error(error.stack); try { await service?.dispose({ reason: "quit" }); } catch {} app.exit(1); });

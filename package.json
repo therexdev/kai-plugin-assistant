@@ -6,7 +6,7 @@
   "scripts": {
     "test": "node --test test/*.test.js",
     "build:runtime": "node scripts/prepare-runtime.js",
-    "test:native": "electron scripts/native-smoke.js"
+    "test:native": "node scripts/run-native-smoke.js"
   },
   "dependencies": {
     "@huggingface/transformers": "3.5.1",
