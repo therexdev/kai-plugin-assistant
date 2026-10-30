@@ -3,7 +3,11 @@
   const $ = id => document.getElementById(id), call = (method, input) => window.kai.call(method, input), logic = window.AssistantLogic;
   const state = { chats: [], current: null, messages: [], busy: false, unsaved: false, models: [], lastError: false };
   const welcome = $("messages").firstElementChild;
-  function notice(message, error = false) { $("notice").textContent = message || ""; $("notice").hidden = !message; $("notice").classList.toggle("error", error); }
+  const banner = window.KaiPluginNotice.attach($("notice"), { focusTarget: () => $("prompt") });
+  function notice(message, error = false) { banner.show(message || "", { error, force: true }); }
+  function closeHistory() { $("chat-shell").classList.remove("history-open"); $("history-toggle").setAttribute("aria-expanded", "false"); }
+  $("history-toggle").addEventListener("click", () => { const open = $("chat-shell").classList.toggle("history-open"); $("history-toggle").setAttribute("aria-expanded", String(open)); });
+  document.addEventListener("keydown", event => { if (event.key === "Escape" && $("chat-shell").classList.contains("history-open")) { closeHistory(); $("history-toggle").focus(); } });
   function controls() {
     for (const id of ["new-chat", "refresh-models", "model", "tokens", "prompt"]) $(id).disabled = state.busy;
     for (const id of ["rename", "pin", "delete"]) $(id).disabled = state.busy || !state.current || state.unsaved;
@@ -35,13 +39,13 @@
       if (message.attachments) { const note = document.createElement("small"); note.className = "attachment-note"; note.textContent = `${message.attachments} saved attachment(s) preserved. This text conversation does not send images to the model.`; article.append(note); }
       $("messages").append(article);
     }
-    $("chat-title").textContent = state.current?.title || "A little space to think.";
-    $("chat-subtitle").textContent = state.current ? "Saved conversation · Shared with your existing KAI profile" : "Write, explore, and work through ideas with a local model.";
+    $("chat-title").textContent = state.current?.title || "New chat";
+    $("chat-subtitle").textContent = state.current ? "Saved conversation" : "Your saved conversations";
     $("pin").textContent = state.current?.pinned ? "★" : "☆"; $("pin").setAttribute("aria-label", state.current?.pinned ? "Remove from favorites" : "Add to favorites");
     $("messages").scrollTop = $("messages").scrollHeight; controls();
   }
   async function listChats() { const result = await call("assistant.list", {}); state.chats = result.chats; renderHistory(); if (result.warnings?.length) notice(result.warnings.join(" "), true); }
-  async function openChat(id) { if (state.unsaved) return; state.current = await call("assistant.get", { id }); state.messages = state.current.messages; state.lastError = state.messages.at(-1)?.role === "user"; notice(""); $("rename-form").hidden = true; renderMessages(); renderHistory(); }
+  async function openChat(id) { if (state.unsaved) return; state.current = await call("assistant.get", { id }); state.messages = state.current.messages; state.lastError = state.messages.at(-1)?.role === "user"; notice(""); $("rename-form").hidden = true; renderMessages(); renderHistory(); closeHistory(); }
   async function loadModels() {
     const previous = $("model").value; state.models = logic.readyModels(await call("models.list", {})); $("model").replaceChildren();
     if (!state.models.length) { const option = document.createElement("option"); option.value = ""; option.textContent = "No local model installed"; $("model").append(option); }
@@ -81,7 +85,7 @@
     state.current = { ...saved, title: messages.find(m => m.role === "user")?.content.slice(0, 80) || "Untitled chat", pinned: false, system: "", messages };
     state.messages = messages; state.unsaved = false; await listChats(); renderMessages(); notice("Saved as a new text conversation. The original conversation and its attachments remain unchanged.");
   }));
-  function resetChat() { state.current = null; state.messages = []; state.lastError = false; $("prompt").value = ""; $("working").textContent = ""; $("rename-form").hidden = true; notice(""); renderMessages(); renderHistory(); $("prompt").focus(); }
+  function resetChat() { closeHistory(); state.current = null; state.messages = []; state.lastError = false; $("prompt").value = ""; $("working").textContent = ""; $("rename-form").hidden = true; notice(""); renderMessages(); renderHistory(); $("prompt").focus(); }
   $("new-chat").addEventListener("click", () => { if (!state.busy && !state.unsaved) resetChat(); });
   $("search").addEventListener("input", renderHistory); $("refresh-models").addEventListener("click", () => guarded(loadModels));
   $("rename").addEventListener("click", () => { $("rename-form").hidden = false; $("rename-title").value = state.current.title; $("rename-title").focus(); });

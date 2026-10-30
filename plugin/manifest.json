@@ -3,8 +3,15 @@
   "apiVersion": 2,
   "id": "kai.assistant",
   "name": "KAI Assistant",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Private conversations with installed local models, with your existing KAI chat history preserved in place.",
   "entry": "index.html",
-  "permissions": ["models.read", "inference.local", "storage.read", "storage.write", "assistant.read", "assistant.write"]
+  "permissions": [
+    "models.read",
+    "inference.local",
+    "storage.read",
+    "storage.write",
+    "assistant.read",
+    "assistant.write"
+  ]
 }

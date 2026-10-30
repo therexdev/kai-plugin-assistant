@@ -4,6 +4,8 @@ Private text conversations with the local models installed in KAI Core. This plu
 
 ## What it does
 
+The window keeps the original Chat layout: conversation history on the left, the KAI welcome screen and prompt cards, and model controls in the composer below the conversation. Narrow windows use the Conversations button to open the history drawer. Notifications have an X to dismiss them.
+
 - Opens the existing KAI chat history from the shared profile, including conversations created by the previous app.
 - Generates real replies through Core's local inference broker. There is no cloud fallback or direct network access.
 - Saves conversations automatically before requesting a reply and after receiving it. Failed requests can be retried without duplicating the question.
