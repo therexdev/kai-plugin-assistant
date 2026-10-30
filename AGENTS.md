@@ -1,0 +1,1 @@
+This is a signed sandboxed KAI Core plugin. Never put secrets or publisher private keys in this repository. Renderer code uses window.kai.call only; host privilege belongs in reviewed Core brokers. Preserve legacy data and never silently overwrite unreadable records. Follow root deployment instructions.
