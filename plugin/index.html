@@ -1,10 +1,226 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KAI Assistant</title><link rel="stylesheet" href="kai-theme.css"><link rel="stylesheet" href="style.css"></head>
-<body><header class="workspace-header"><div class="workspace-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H9l-5 4Z"/></svg><h1>Chat with KAI</h1></div><span class="workspace-caption">ASSISTANT</span></header>
-<div class="app" id="chat-shell"><aside class="sidebar" id="chats-pane" aria-label="Conversations"><button class="new-chat" id="new-chat">+ New chat</button><label class="sr-only" for="search">Search chats</label><input id="search" type="search" placeholder="Search chats…" autocomplete="off"><div class="rail-label">Chats</div><div id="history" class="history" aria-label="Saved conversations"></div></aside>
-<main class="chat-pane"><div class="chat-toolbar"><button id="history-toggle" type="button" aria-controls="chats-pane" aria-expanded="false">☰ <span>Conversations</span></button><span id="chat-title">New chat</span><span id="chat-subtitle" class="sr-only">Your saved conversations</span><div class="chat-actions"><button id="rename" type="button" title="Rename conversation" disabled>Rename</button><button id="pin" type="button" title="Favorite conversation" disabled>☆</button><button id="delete" type="button" class="danger" title="Delete conversation" disabled>Delete</button></div></div>
-<form id="rename-form" class="rename-form" hidden><label for="rename-title">Conversation title</label><input id="rename-title" maxlength="80" required><button class="primary" type="submit">Save title</button><button type="button" id="cancel-rename">Cancel</button></form>
-<div id="notice" class="notice" role="status" hidden></div>
-<section id="messages" class="messages" aria-label="Conversation" aria-live="polite"><div class="welcome"><div class="welcome-hero"><div class="welcome-copy"><p class="welcome-eyebrow">YOUR AI WORKSPACE</p><h2>What would you like to work on?</h2><p>Ask a question, develop an idea, or get something done.</p></div><img class="welcome-character" src="kai-character.svg" alt="" aria-hidden="true"></div><div class="suggestions"><button type="button" data-prompt="Help me understand something new. Ask me what I’m curious about."><span class="prompt-symbol">?</span><strong>Answer a question</strong><small>Make the complicated click.</small></button><button type="button" data-prompt="Help me turn an idea into a project. Ask me what I want to build."><span class="prompt-symbol">✧</span><strong>Help me build</strong><small>Big ideas start small.</small></button><button type="button" data-prompt="Let’s brainstorm some fresh ideas. Ask me what I’m working on."><span class="prompt-symbol">↗</span><strong>Find a fresh idea</strong><small>A different way to think.</small></button></div></div></section>
-<div class="composer-wrap"><form id="composer" class="composer"><div class="composer-options"><span class="local-badge">Local model</span><label class="sr-only" for="model">Local model</label><select id="model" aria-label="Local model"><option value="">Loading installed models…</option></select><button id="refresh-models" type="button" title="Refresh models" aria-label="Refresh models">↻</button><label for="tokens" class="reply-limit">Reply limit<select id="tokens"><option value="512">512 tokens</option><option value="1024" selected>1,024 tokens</option><option value="2048">2,048 tokens</option><option value="4096">4,096 tokens</option></select></label></div><label class="sr-only" for="prompt">Your message</label><textarea id="prompt" placeholder="Ask KAI anything, or dream something up…" maxlength="12000" rows="2" required></textarea><div class="composer-tools"><span id="working" role="status"></span><button type="button" id="retry" hidden>Retry reply</button><button type="button" id="save-again" hidden>Save again</button><button type="button" id="save-copy" hidden>Save text as new chat</button><button class="primary send" id="send" type="submit" disabled>Send</button></div></form><div class="composer-footnote"><span id="model-status" role="status">Checking availability</span><span>Ctrl / ⌘ + Enter to send</span></div></div>
-</main></div><script src="kai-notices.js"></script><script src="logic.js"></script><script src="app.js"></script></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KAI Assistant</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="product-experience.css"><link rel="stylesheet" href="kai-character.css"><link rel="stylesheet" href="language.css"><link rel="stylesheet" href="plugin.css"></head><body class="product-v2"><div id="app"><main id="main"><header class="workspace-header"><div><p class="workspace-eyebrow">YOUR AI WORKSPACE</p><h1 id="workspace-title">Chat with KAI</h1></div><div id="workspace-caption" class="workspace-caption">A little curiosity goes a long way.</div><div class="assistant-nav"><button data-view="chat">Chat</button><button id="launch-kai">Launch KAI</button><button data-view="settings">Settings</button></div></header><p id="kai-launch-error" hidden></p><section id="view-onboarding" class="view" hidden>
+        <div class="onboard-card">
+          <div class="onboard-character" data-kai-character aria-hidden="true"></div>
+          <h1>Welcome to Koinos&nbsp;AI</h1>
+          <p class="lede">Let’s find your first local model. You can also connect OpenAI or Anthropic in desktop Settings, or explore the network.</p>
+          <div class="hw-summary" id="hw-summary"></div>
+          <div class="model-offer">
+            <div>
+              <div class="model-name" id="offer-name">—</div>
+              <div class="model-sub" id="offer-sub"></div>
+            </div>
+            <button id="btn-download" class="primary">Download &amp; start</button>
+          </div>
+          <div id="download-progress" hidden>
+            <div class="bar"><div id="bar-fill"></div></div>
+            <div class="bar-label" id="bar-label">Starting…</div>
+          </div>
+          <p class="error" id="onboard-error" hidden></p>
+        </div>
+      </section><section id="view-chat" class="view" hidden>
+       <div class="kc-shell chat-shell">
+        <aside class="kc-rail" id="chats-pane">
+          <button id="btn-new-chat" class="kc-new" title="Start a new chat">+ New chat</button>
+          <input id="chat-search" type="search" placeholder="Search chats…" />
+          <div class="kc-rail-label">Chats</div>
+          <div id="chat-list"></div>
+        </aside>
+        <div class="chat-pane">
+        <div class="chat-toolbar"><button id="history-toggle" type="button" aria-controls="chats-pane" aria-expanded="false">☰ <span>Conversations</span></button><span>Make room for your next idea.</span></div>
+        <div id="messages" aria-live="polite">
+          <div id="chat-empty" class="chat-empty">
+            <div class="welcome-hero">
+              <div class="welcome-copy"><p class="welcome-eyebrow">YOUR AI WORKSPACE</p><h2>What would you like to work on?</h2><h3></h3><p>Ask a question, develop an idea, or get something done.</p></div>
+              <div class="welcome-character" data-kai-character aria-hidden="true"></div>
+            </div>
+            <div class="welcome-prompts">
+              <button type="button" data-chat-prompt="Help me understand something new. Ask me what I’m curious about."><span class="prompt-symbol">?</span><strong>Answer a question</strong><small>Make the complicated click.</small><b aria-hidden="true">↗</b></button>
+              <button type="button" data-chat-prompt="Help me turn an idea into a project. Ask me what I want to build."><span class="prompt-symbol">✧</span><strong>Help me build</strong><small>Big ideas start small.</small><b aria-hidden="true">↗</b></button>
+              <button type="button" data-chat-prompt="Let’s brainstorm some fresh ideas. Ask me what I’m working on."><span class="prompt-symbol">↗</span><strong>Find a fresh idea</strong><small>A different way to think.</small><b aria-hidden="true">↗</b></button>
+            </div>
+            <p class="welcome-footnote">Choose your AI below. Local, network, or your own desktop connection.</p>
+          </div>
+        </div>
+        <div id="network-chat-account" class="network-chat-account" hidden>
+          <div><strong>Koinos Network</strong><span id="network-chat-balance">Balance loading…</span></div>
+          <div class="network-chat-funding"><label for="network-koin-amount">Amount to add (KOIN)</label><input id="network-koin-amount" inputmode="decimal" placeholder="Enter KOIN amount" maxlength="22" autocomplete="off" aria-describedby="network-chat-help network-chat-status" /><button id="network-add-koin" class="primary small">Add KOIN</button><button id="network-retry-purchase" class="small" hidden>Retry purchase</button><button id="network-account" class="small">Account</button></div>
+          <button id="network-recover" class="small" hidden>Recover last reply</button>
+          <p id="network-model-price" hidden></p>
+          <p id="network-chat-help">Send uses your existing balance and asks you to approve a reservation when needed. Add KOIN deposits more from your wallet.</p>
+          <p id="network-chat-reservation" role="status" hidden></p>
+          <p id="network-chat-status" role="status" aria-live="polite"></p>
+          <p id="network-credit-sources" role="status"></p>
+        </div>
+        <form id="composer">
+          <div class="composer-options">
+          <select id="mode-pick" title="How to answer: plain chat, multi-step web research, an agent that uses tools, or a whole AI team">
+            <option value="chat">Chat</option>
+            <option value="research">Research</option>
+            <option value="agent">Agent</option>
+            <option value="team:research">Research team</option>
+            <option value="team:analyst">Analyst team (code)</option>
+            <option value="team:review">Write &amp; review team</option>
+          </select>
+          <select id="src-pick" title="Choose this machine, Koinos Network, or a private desktop provider"></select>
+          <select id="model-pick" title="Which model answers" aria-describedby="network-model-price"></select>
+          <select id="persona-pick" title="How the AI should answer">
+            <option value="">Default style</option>
+            <option value="concise">Concise</option>
+            <option value="explainer">Explain simply</option>
+            <option value="code">Code helper</option>
+            <option value="custom">Custom…</option>
+          </select>
+          </div>
+          <div class="composer-entry">
+          <label class="sr-only" for="input">Your message to KAI</label>
+          <textarea id="input" rows="1" placeholder="Ask KAI anything, or dream something up…" autocomplete="off"></textarea>
+          <div class="composer-buttons">
+          <button id="btn-attach" type="button" title="Attach a text file as context"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 13 6-6a3 3 0 0 1 4 4l-8 8a5 5 0 0 1-7-7l9-9"/></svg></button>
+          <button id="btn-web" type="button" title="Web search: the AI looks things up live (your search query leaves this machine)" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12H3M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 3c-5 5-5 13 0 18 5-5 5-13 0-18"/></svg></button>
+          <button id="btn-mic" type="button" title="Voice input: speak, and it's typed for you — transcribed on this machine, audio never leaves it" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5a3 3 0 0 1 6 0v7a3 3 0 0 1-6 0ZM6 10v2a6 6 0 0 0 12 0v-2M12 18v4"/></svg></button>
+          <button id="btn-send" class="primary" type="submit">Send</button>
+          <button id="btn-stop" type="button" hidden>Stop</button>
+          </div>
+          </div>
+          <input id="attach-input" type="file" hidden />
+        </form>
+        <div id="attach-chip-row" hidden>
+          <span id="attach-chip"><span id="attach-name"></span> <button id="attach-remove" type="button" title="Remove attachment">×</button></span>
+        </div>
+        <div id="persona-custom-row" hidden>
+          <textarea id="persona-custom" rows="2" placeholder="Describe how the AI should behave, e.g. “You are a pirate. Answer everything in character.”"></textarea>
+        </div>
+        </div>
+       </div>
+      </section><section id="view-settings" class="view" hidden><div class="settings-card"><h1>Settings</h1><label for="interface-language">Language</label><select id="interface-language"></select><p id="language-setting-status"></p><section id="desktop-providers" hidden>
+            <h2>Desktop AI connections</h2>
+            <p class="hint">Use your own OpenAI or Anthropic API account in chat and desktop KAI.
+              Chats, attachments and relevant app tool results go directly to your chosen provider.
+              API usage is billed by that provider. Keys are encrypted on this computer and are never offered to the Koinos Network.</p>
+            <p id="provider-privacy" class="hint" role="status"></p>
+            <div id="provider-openai" class="provider-card" data-provider="openai">
+              <div class="provider-heading"><h3>OpenAI</h3><span class="hint" data-provider-state>Not connected</span></div>
+              <label for="provider-openai-key">API key</label>
+              <input id="provider-openai-key" type="password" autocomplete="off" spellcheck="false" maxlength="4096" placeholder="Paste your API key" />
+              <label for="provider-openai-model">Model ID <span class="hint">(optional — or refresh models after saving)</span></label>
+              <input id="provider-openai-model" data-provider-model autocomplete="off" spellcheck="false" maxlength="180" placeholder="A model ID from your provider account" />
+              <div class="provider-buttons">
+                <button class="primary small" data-provider-action="save">Save connection</button>
+                <button class="small" data-provider-action="refresh">Test &amp; refresh models</button>
+                <button class="small" data-provider-action="use">Use in chat</button>
+                <button class="small" data-provider-action="remove">Remove</button>
+                <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">Get an API key ↗</a>
+              </div>
+              <p class="hint" data-provider-result role="status" aria-live="polite"></p>
+            </div>
+            <div id="provider-anthropic" class="provider-card" data-provider="anthropic">
+              <div class="provider-heading"><h3>Anthropic</h3><span class="hint" data-provider-state>Not connected</span></div>
+              <label for="provider-anthropic-key">API key</label>
+              <input id="provider-anthropic-key" type="password" autocomplete="off" spellcheck="false" maxlength="4096" placeholder="Paste your API key" />
+              <label for="provider-anthropic-model">Model ID <span class="hint">(optional — or refresh models after saving)</span></label>
+              <input id="provider-anthropic-model" data-provider-model autocomplete="off" spellcheck="false" maxlength="180" placeholder="A model ID from your provider account" />
+              <div class="provider-buttons">
+                <button class="primary small" data-provider-action="save">Save connection</button>
+                <button class="small" data-provider-action="refresh">Test &amp; refresh models</button>
+                <button class="small" data-provider-action="use">Use in chat</button>
+                <button class="small" data-provider-action="remove">Remove</button>
+                <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener noreferrer">Get an API key ↗</a>
+              </div>
+              <p class="hint" data-provider-result role="status" aria-live="polite"></p>
+            </div>
+            <p class="hint">Available in desktop chat, Research, Agent and KAI. Teams, scheduled tasks,
+              the local API and network earning continue using their existing models. Stop cancels an active provider reply.</p>
+          </section><label class="check"><input id="network-paid-first" type="checkbox">Use paid credits before free credits</label><p id="network-credit-priority-help" class="hint"></p><h2>Network &amp; privacy</h2><select id="privacy-pick"><option value="local-only">Local-Only</option><option value="local-first">Local-First</option><option value="network">Network</option></select></div></section><section id="view-recovery" class="view" hidden><h1>Saved research &amp; agent results</h1></section><footer class="assistant-footer"><div id="status-pane"><div class="status-row"><span id="status-dot" class="dot"></span><span id="status-text">Connecting…</span></div><div class="status-sub" id="status-model"></div></div><span id="app-version"></span><span id="privacy-note"></span></footer></main></div><dialog id="language-dialog" aria-labelledby="language-title" aria-describedby="language-intro">
+    <div class="language-symbol" aria-hidden="true">◎</div>
+    <p translate="no">Koinos AI</p>
+    <h1 id="language-title">Choose your language</h1>
+    <p id="language-intro">Welcome to Koinos AI. Select your language to get started.</p>
+    <label for="first-language">Language</label>
+    <select id="first-language"></select>
+    <p>You can change this later in Settings.</p>
+    <p id="language-error" class="error" role="alert"></p>
+    <button id="language-continue" class="primary" type="button">Continue</button>
+  </dialog><template id="chat-welcome-template">
+          <div id="chat-empty" class="chat-empty">
+            <div class="welcome-hero">
+              <div class="welcome-copy"><p class="welcome-eyebrow">YOUR AI WORKSPACE</p><h2>What would you like to work on?</h2><h3></h3><p>Ask a question, develop an idea, or get something done.</p></div>
+              <div class="welcome-character" data-kai-character aria-hidden="true"></div>
+            </div>
+            <div class="welcome-prompts">
+              <button type="button" data-chat-prompt="Help me understand something new. Ask me what I’m curious about."><span class="prompt-symbol">?</span><strong>Answer a question</strong><small>Make the complicated click.</small><b aria-hidden="true">↗</b></button>
+              <button type="button" data-chat-prompt="Help me turn an idea into a project. Ask me what I want to build."><span class="prompt-symbol">✧</span><strong>Help me build</strong><small>Big ideas start small.</small><b aria-hidden="true">↗</b></button>
+              <button type="button" data-chat-prompt="Let’s brainstorm some fresh ideas. Ask me what I’m working on."><span class="prompt-symbol">↗</span><strong>Find a fresh idea</strong><small>A different way to think.</small><b aria-hidden="true">↗</b></button>
+            </div>
+            <p class="welcome-footnote">Choose your AI below. Local, network, or your own desktop connection.</p>
+          </div>
+  </template><template id="kai-artwork"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 40 1024 1440" class="kai-character" aria-hidden="true">
+  <defs>
+    <!-- Code-native silhouette clips keep the original texture intact. -->
+    <mask maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1536" id="kai-head-cutout"><path fill="white" stroke="black" stroke-width="10" stroke-linejoin="round" d="M114 304 118 174Q121 96 151 96Q185 90 193 139L194 258Q300 94 510 96Q720 90 831 258L829 152Q827 99 857 96Q888 92 901 127L910 307Q939 325 952 352Q966 386 966 438Q966 520 936 544Q905 568 856 558Q836 665 674 677Q512 692 350 677Q193 664 171 554Q122 572 90 548Q60 528 56 451Q51 384 68 353Q82 320 114 304Z"/></mask>
+    <filter id="kai-face-glow" x="-35%" y="-50%" width="170%" height="200%"><feGaussianBlur stdDeviation="8" result="glow"/><feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <radialGradient id="kai-ground"><stop stop-color="#1268ed" stop-opacity=".18"/><stop offset="1" stop-color="#1268ed" stop-opacity="0"/></radialGradient>
+
+    <mask id="kai-torso-cutout" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1536"><path d="M350 674Q510 695 677 674L738 729Q691 725 667 757L670 905Q676 930 665 951L574 1040Q514 1055 451 1040L354 952Q348 933 356 908L354 758Q329 723 285 729Z" fill="white" stroke="black" stroke-width="4" stroke-linejoin="round"/></mask>
+    <mask id="kai-upper-arm-left-cutout" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1536"><path d="M333 726Q292 726 266 773L238 815Q223 830 234 848Q253 873 278 878Q293 883 309 861Q338 829 355 783L355 747Z" fill="white" stroke="black" stroke-width="4" stroke-linejoin="round"/></mask>
+    <mask id="kai-upper-arm-right-cutout" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1536"><path d="M333 726Q292 726 266 773L238 815Q223 830 234 848Q253 873 278 878Q293 883 309 861Q338 829 355 783L355 747Z" fill="white" stroke="black" stroke-width="4" stroke-linejoin="round" transform="translate(1024 0) scale(-1 1)"/></mask>
+    <mask id="kai-forearm-left-cutout" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1536"><path d="M239 831Q205 853 127 908Q111 930 108 962L108 972Q77 996 65 1025Q51 1040 51 1066Q50 1090 70 1097Q83 1102 95 1094L110 1058Q134 1089 153 1073Q172 1063 170 1039Q190 1033 200 1008Q242 993 267 941L301 884Q266 870 239 831Z" fill="white" stroke="black" stroke-width="4" stroke-linejoin="round"/></mask>
+    <mask id="kai-forearm-right-cutout" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1536"><path d="M239 831Q205 853 127 908Q111 930 108 962L108 972Q77 996 65 1025Q51 1040 51 1066Q50 1090 70 1097Q83 1102 95 1094L110 1058Q134 1089 153 1073Q172 1063 170 1039Q190 1033 200 1008Q242 993 267 941L301 884Q266 870 239 831Z" fill="white" stroke="black" stroke-width="4" stroke-linejoin="round" transform="translate(1024 0) scale(-1 1)"/></mask>
+    <mask id="kai-thigh-left-cutout" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1536"><path d="M361 954Q409 1006 459 1037L468 1074L451 1150Q415 1168 382 1167Q344 1161 310 1129L319 1060Q325 1017 361 954Z" fill="white" stroke="black" stroke-width="4" stroke-linejoin="round"/></mask>
+    <mask id="kai-thigh-right-cutout" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1536"><path d="M361 954Q409 1006 459 1037L468 1074L451 1150Q415 1168 382 1167Q344 1161 310 1129L319 1060Q325 1017 361 954Z" fill="white" stroke="black" stroke-width="4" stroke-linejoin="round" transform="translate(1024 0) scale(-1 1)"/></mask>
+    <mask id="kai-shin-left-cutout" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1536"><path d="M318 1123Q380 1099 422 1135L450 1150Q472 1215 465 1292Q478 1345 462 1362C397 1401 215 1425 178 1387Q170 1374 177 1347Q190 1288 246 1251Q255 1197 286 1163Z" fill="white" stroke="black" stroke-width="4" stroke-linejoin="round"/></mask>
+    <mask id="kai-shin-right-cutout" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1536"><path d="M318 1123Q380 1099 422 1135L450 1150Q472 1215 465 1292Q478 1345 462 1362C397 1401 215 1425 178 1387Q170 1374 177 1347Q190 1288 246 1251Q255 1197 286 1163Z" fill="white" stroke="black" stroke-width="4" stroke-linejoin="round" transform="translate(1024 0) scale(-1 1)"/></mask>
+    <mask id="kai-wave-sleeve-cutout" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1536"><path d="M239 831Q205 853 127 908Q111 930 108 962L160 1002Q230 990 267 941L301 884Q266 870 239 831Z" fill="white" stroke="black" stroke-width="4"/></mask>
+    <linearGradient id="kai-palm-shade" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#496181"/><stop offset=".5" stop-color="#162c4e"/><stop offset="1" stop-color="#061229"/></linearGradient>
+    <linearGradient id="kai-cape-shade" x1="0" y1="0" x2="1" y2=".8"><stop stop-color="#039dff"/><stop offset=".32" stop-color="#064ad4"/><stop offset=".68" stop-color="#083bc5"/><stop offset="1" stop-color="#06b8ff"/></linearGradient>
+    <linearGradient id="kai-prop-metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset=".42" stop-color="#a3eaff"/><stop offset=".65" stop-color="#0575eb"/><stop offset="1" stop-color="#05245b"/></linearGradient>
+    <radialGradient id="kai-prop-glass"><stop stop-color="#58f3ff" stop-opacity=".04"/><stop offset=".72" stop-color="#07beff" stop-opacity=".12"/><stop offset="1" stop-color="#00baff" stop-opacity=".6"/></radialGradient>
+    <radialGradient id="kai-bulb-light"><stop stop-color="#fffbd1"/><stop offset=".55" stop-color="#ffdf65"/><stop offset="1" stop-color="#ffaa17"/></radialGradient>
+  </defs>
+  <ellipse class="kai3d-shadow" cx="512" cy="1415" rx="390" ry="46" fill="url(#kai-ground)"/>
+  <g class="kai3d-puppet"><g class="kai3d-body">
+    <g class="kai3d-cape"><path d="M351 683Q285 696 214 813L129 973Q77 1116 173 1182L183 1139Q234 1088 309 1121Q512 1145 715 1121Q790 1088 841 1139L851 1182Q947 1116 895 973L810 813Q739 696 673 683Z" fill="url(#kai-cape-shade)" stroke="#075bdd" stroke-width="9"/><path d="M308 768Q184 1054 173 1150M716 768Q840 1054 851 1150" fill="none" stroke="#02c8ff" stroke-opacity=".35" stroke-width="12"/></g>
+    <g class="kai3d-leg kai3d-leg-left"><image href="assets/kai-character.png" width="1024" height="1536" mask="url(#kai-thigh-left-cutout)"/><g class="kai3d-shin kai3d-shin-left"><image href="assets/kai-character.png" width="1024" height="1536" mask="url(#kai-shin-left-cutout)"/></g></g>
+    <g class="kai3d-leg kai3d-leg-right"><image href="assets/kai-character.png" width="1024" height="1536" mask="url(#kai-thigh-right-cutout)"/><g class="kai3d-shin kai3d-shin-right"><image href="assets/kai-character.png" width="1024" height="1536" mask="url(#kai-shin-right-cutout)"/></g></g>
+    <g class="kai3d-torso"><image href="assets/kai-character.png" width="1024" height="1536" mask="url(#kai-torso-cutout)"/></g>
+    <g class="kai3d-head"><g class="kai3d-head-motion">
+      <image href="assets/kai-character.png" width="1024" height="1536" mask="url(#kai-head-cutout)"/>
+      <g class="kai3d-gaze" filter="url(#kai-face-glow)" fill="#35e4ff" stroke="#35e4ff" stroke-linecap="round">
+        <g class="kai3d-brows" fill="none" stroke-width="13"><path d="M302 285Q329 266 358 280"/><path d="M660 280Q690 266 718 285"/></g>
+        <g class="kai3d-eyes" fill="none" stroke-width="30">
+          <path class="kai3d-happy" d="M283 441C299 346 382 326 412 441M610 441C641 326 724 346 740 441"/>
+          <g class="kai3d-attentive" fill="#35e4ff" stroke="none"><ellipse cx="351" cy="403" rx="28" ry="52"/><ellipse cx="672" cy="403" rx="28" ry="52"/></g>
+        </g>
+        <path class="kai3d-smile" stroke="none" d="M457 504Q512 533 568 504Q556 565 512 566Q468 565 457 504Z"/>
+        <ellipse class="kai3d-surprise" cx="512" cy="529" rx="21" ry="29" stroke="none"/>
+        <ellipse class="kai3d-mouth" cx="512" cy="534" rx="45" ry="37" stroke="none"/>
+        <g class="kai3d-thought" stroke="none"><circle cx="473" cy="535" r="11"/><circle cx="512" cy="535" r="11"/><circle cx="551" cy="535" r="11"/></g>
+      </g>
+      <g class="kai3d-listen" fill="none" stroke="#09baff" stroke-width="13" stroke-linecap="round"><path d="M27 358Q-5 418 27 479M994 358Q1026 418 994 479"/></g>
+    </g></g>
+    <g class="kai3d-search-props">
+      <g class="kai3d-search-pages" fill="#d7f8ff" fill-opacity=".83" stroke="#19c6ff" stroke-width="7"><g class="kai3d-page-one"><rect x="52" y="663" width="134" height="165" rx="17" transform="rotate(-12 119 746)"/><path d="M78 707H149M78 733H142M78 759H129"/></g><g class="kai3d-page-two"><rect x="848" y="665" width="134" height="165" rx="17" transform="rotate(12 915 746)"/><path d="M880 707H952M880 733H942M880 759H927"/></g></g>
+      <g class="kai3d-magnifier"><path d="M378 550 419 707" stroke="#032c71" stroke-width="53" stroke-linecap="round"/><path d="M379 550 419 707" stroke="url(#kai-prop-metal)" stroke-width="36" stroke-linecap="round"/><circle cx="298" cy="439" r="140" fill="#07315a" fill-opacity=".2" stroke="#05377c" stroke-width="30"/><circle cx="298" cy="439" r="140" fill="url(#kai-prop-glass)" stroke="url(#kai-prop-metal)" stroke-width="19"/><circle cx="298" cy="439" r="119" fill="none" stroke="#1fe4ff" stroke-width="5"/><path d="M211 408Q224 350 280 347" fill="none" stroke="#c5fcff" stroke-width="15" stroke-linecap="round"/></g>
+    </g>
+    <g class="kai3d-arm kai3d-arm-left"><image href="assets/kai-character.png" width="1024" height="1536" mask="url(#kai-upper-arm-left-cutout)"/><g class="kai3d-forearm kai3d-forearm-left"><image href="assets/kai-character.png" width="1024" height="1536" mask="url(#kai-forearm-left-cutout)"/><g class="kai3d-curled-forearm"><image href="assets/kai-character.png" width="1024" height="1536" mask="url(#kai-wave-sleeve-cutout)"/>
+      <g class="kai3d-curled-hand" transform="translate(142 965) rotate(187)" fill="url(#kai-palm-shade)" stroke="#071c3c" stroke-width="6" stroke-linejoin="round">
+        <!-- A relaxed fist: upright knuckles and a thumb folded across the fingers. -->
+        <path d="M-40 0Q-58-22-53-46L-48-67Q-45-82-31-78Q-25-95-10-87Q2-99 15-87Q33-96 43-78L48-42Q58-24 40-3Z"/>
+        <path d="M-31-75-32-48Q-23-38-13-47L-10-84M-12-47Q1-38 12-49L15-84M12-49Q27-39 37-51L36-74" fill="none" stroke="#6f91b8" stroke-width="4" stroke-linecap="round"/>
+        <path d="M42-48Q63-49 60-29Q48-5 18-9L-6-18Q-18-29-8-38Q0-44 14-34L30-32Z"/>
+        <path d="M-40 0Q0-11 42 0L37 24Q-1 33-37 22Z" fill="url(#kai-prop-metal)" stroke="#1255a2"/>
+      </g></g><g class="kai3d-wave-forearm"><image href="assets/kai-character.png" width="1024" height="1536" mask="url(#kai-wave-sleeve-cutout)"/><g transform="translate(142 965) rotate(-120)"><g class="kai3d-wave-palm" fill="url(#kai-palm-shade)" stroke="#071c3c" stroke-width="7" stroke-linejoin="round">
+        <path d="M-43-2C-61-31-70-43-77-64L-90-94Q-94-108-83-112Q-72-116-63-99L-47-78-58-155Q-60-170-48-172Q-34-174-32-157L-21-99-22-177Q-22-191-9-191Q5-190 5-175L8-101 17-166Q19-182 32-179Q44-176 41-160L33-92 49-136Q54-150 66-143Q77-137 71-124L53-64Q48-38 36-3Z"/>
+        <path d="M-33-55Q-2-69 26-49M-37-79-29-42M-6-89-4-50M24-82 16-47" fill="none" stroke="#6989af" stroke-opacity=".5" stroke-width="5" stroke-linecap="round"/>
+        <path d="M-42-4Q-3-13 39-4L35 21Q-4 30-39 19Z" fill="url(#kai-prop-metal)" stroke="#1255a2"/>
+      </g></g></g></g></g>
+    <g class="kai3d-arm kai3d-arm-right"><image href="assets/kai-character.png" width="1024" height="1536" mask="url(#kai-upper-arm-right-cutout)"/><g class="kai3d-forearm kai3d-forearm-right"><image href="assets/kai-character.png" width="1024" height="1536" mask="url(#kai-forearm-right-cutout)"/></g></g>
+
+    <g class="kai3d-thinking-props">
+      <g class="kai3d-question-prop" transform="translate(865 224)"><path d="M-57-70Q-8-103 45-66Q88-35 54 12L23 40V70H-17V23Q-16 6 5-10Q35-32 8-47Q-12-61-31-43Z" fill="#0c80ff" stroke="#84eaff" stroke-width="8"/><circle cy="103" r="23" fill="#05cfff" stroke="#8bf0ff" stroke-width="6"/></g>
+      <g class="kai3d-idea-prop"><g transform="translate(887 262)"><g class="kai3d-idea-rays" fill="none" stroke="#ffcf4f" stroke-width="12" stroke-linecap="round"><path d="M0-129V-159M91-91L112-112M127 0H157M-91-91L-112-112M-127 0H-157M0-129V-159"/></g><path d="M-41 57C-44 32-79 14-79-28A79 79 0 0 1 79-28C79 14 44 32 41 57Z" fill="url(#kai-bulb-light)" stroke="#fff4be" stroke-width="9"/><path d="M-15 55V-11L0 2 15-11V55M-39 74H39M-31 90H31" fill="none" stroke="#f8fcff" stroke-width="11" stroke-linecap="round"/><path d="M-28 101Q0 128 28 101" fill="#2876c2"/></g></g>
+    </g>
+
+  </g></g>
+  <g class="kai3d-ledge"><path d="M166 1470H858" stroke="#053971" stroke-width="13" stroke-linecap="round"/><path d="M166 1467H858" stroke="#15c8ff" stroke-width="5" stroke-linecap="round"/></g>
+</svg>
+</template><script src="bridge.js"></script><script src="locales/catalogs.js"></script><script src="i18n.js"></script><script src="language-settings.js"></script><script src="markdown.js"></script><script src="audio-wav.js"></script><script src="agents.js"></script><script src="connection-profiles.js"></script><script src="companion-client.js"></script><script src="credit-account.js"></script><script src="network-chat.js"></script><script src="credit-runs.js"></script><script src="desktop-providers.js"></script><script src="brand.js"></script><script src="app-navigation.js"></script><script src="app.js"></script><script src="assistant-extras.js"></script><script src="mascot-launcher.js"></script><script src="plugin.js"></script></body></html>

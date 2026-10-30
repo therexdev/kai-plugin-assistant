@@ -3,8 +3,8 @@
   "apiVersion": 2,
   "id": "kai.assistant",
   "name": "KAI Assistant",
-  "version": "0.1.1",
-  "description": "Private conversations with installed local models, with your existing KAI chat history preserved in place.",
+  "version": "0.2.0",
+  "description": "The original KAI chat workspace, advanced agents and research, desktop providers, voice and animated desktop companion.",
   "entry": "index.html",
   "permissions": [
     "models.read",
@@ -12,6 +12,11 @@
     "storage.read",
     "storage.write",
     "assistant.read",
-    "assistant.write"
+    "assistant.write",
+    "assistant.chat",
+    "assistant.native",
+    "assistant.network",
+    "assistant.media",
+    "desktop.preferences"
   ]
 }

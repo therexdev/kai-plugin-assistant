@@ -1,0 +1,3 @@
+:root{color-scheme:light}
+.product-v2 #persona-pick{display:block}
+#main{min-width:0;width:100%}.assistant-nav{display:flex;gap:8px;align-items:center}.assistant-footer{display:flex;align-items:center;gap:14px;padding:6px 20px;color:var(--text-dim);font-size:11px}.assistant-footer #status-pane{margin:0;padding:4px 10px}.assistant-footer .status-sub{display:none}#view-settings{overflow:auto}#view-recovery{overflow:auto;padding:24px}.product-v2 #main{padding-bottom:0}#view-chat{min-height:0;flex:1}.assistant-nav button{white-space:nowrap}@media(max-width:700px){.workspace-caption{display:none}.assistant-footer #privacy-note{display:none}}

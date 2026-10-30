@@ -9,7 +9,7 @@ assert.deepEqual(pkg.manifest,manifest); assert.equal(manifest.id,meta.id); asse
 const key=crypto.createPublicKey({key:Buffer.from(pkg.publicKey,"base64"),format:"der",type:"spki"});
 assert.equal(key.asymmetricKeyType,"ed25519"); assert.equal(crypto.createHash("sha256").update(key.export({format:"der",type:"spki"})).digest("hex"),meta.fingerprint);
 assert.ok(crypto.verify(null,Buffer.from(canonical({manifest:pkg.manifest,files:pkg.files})),key,Buffer.from(pkg.signature,"base64")),"Publisher signature does not match");
-const files={}; function walk(dir,prefix=""){for(const item of fs.readdirSync(dir,{withFileTypes:true})){const rel=prefix+item.name;if(rel==="manifest.json")continue;assert.ok(!item.isSymbolicLink(),"No symlinks"); if(item.isDirectory())walk(path.join(dir,item.name),rel+"/");else files[rel]=fs.readFileSync(path.join(dir,item.name),"utf8");}} walk(source);
-assert.deepEqual(pkg.files,files,"Signed release differs from checked-in plugin source"); assert.ok(Buffer.byteLength(JSON.stringify(pkg))<=5*1024*1024);
+const files={}; function walk(dir,prefix=""){for(const item of fs.readdirSync(dir,{withFileTypes:true})){const rel=prefix+item.name;if(rel==="manifest.json")continue;assert.ok(!item.isSymbolicLink(),"No symlinks"); if(item.isDirectory())walk(path.join(dir,item.name),rel+"/");else files[rel]=fs.readFileSync(path.join(dir,item.name)).toString(/\.(png|jpg|jpeg|webp|gif|wav|ogg|mp3|woff2?)$/i.test(rel)?"base64":"utf8");}} walk(source);
+assert.deepEqual(pkg.files,files,"Signed release differs from checked-in plugin source"); assert.ok(Buffer.byteLength(JSON.stringify(pkg))<=24*1024*1024);
 assert.equal(manifest.version,JSON.parse(fs.readFileSync(path.join(root,"package.json"),"utf8")).version);
 console.log(`Verified ${manifest.id}@${manifest.version}, ${Object.keys(files).length} signed source files.`);

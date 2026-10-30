@@ -1,44 +1,21 @@
 # KAI Assistant
 
-Private text conversations with the local models installed in KAI Core. This plugin requires **KAI Core 0.2.0 or later** and an installed, ready text model.
+The original KAI chat workspace and desktop companion, installed as a KAI Core plugin. Its chat renderer, styles, advanced modes, provider settings, voice controls and mascot use the original application implementations.
 
-## What it does
+## Included experience
 
-The window keeps the original Chat layout: conversation history on the left, the KAI welcome screen and prompt cards, and model controls in the composer below the conversation. Narrow windows use the Conversations button to open the history drawer. Notifications have an X to dismiss them.
+- Original conversation rail, full-text search, favorites, rename, delete, welcome screen and prompt cards.
+- Chat, Research, Agent, Research team, Analyst team and Write & review team.
+- Local models, Koinos Network credits and private OpenAI/Anthropic connections, with their original routing and payment controls.
+- Streaming, cancellation, regenerate, citations, text and image attachments, personas and custom instructions.
+- Reviewed Brain recall and connected actions through the original companion engine.
+- Microphone input and local transcription, read-aloud, and the animated desktop companion with its original voice, wake-word, Eyes and reviewed computer controls.
+- Original provider configuration, language settings and paid-credit priority.
 
-- Opens the existing KAI chat history from the shared profile, including conversations created by the previous app.
-- Generates real replies through Core's local inference broker. There is no cloud fallback or direct network access.
-- Saves conversations automatically before requesting a reply and after receiving it. Failed requests can be retried without duplicating the question.
-- Finds conversations by title, renames them, favorites them, and deletes them after a native confirmation.
-- Stores the preferred local model and reply limit in this plugin's private storage.
+Core owns model inference, secure credentials, network policy, payment journals and native approvals. Plugin renderers have no unrestricted network, filesystem or IPC access. Voice, camera and computer actions retain their native permission checks. Other installed feature screens open in their own plugin windows.
 
-Saved attachments and citation metadata are preserved when a legacy chat is continued. This version displays and sends **text only**; image attachments, microphone input, voice output, Brain access, connected accounts, tools, and remote agents are not supported. Long conversations use the latest messages that fit within Core's 16,000-character prompt limit, with a visible context notice; the full saved history remains unchanged.
-
-## Install and use
-
-1. Install KAI Core 0.2.0 or later, then download this repository's signed `.kaiplugin` asset from Releases.
-2. In Core, open Plugins → Install package, choose the downloaded file, and review the publisher and requested capabilities before installing.
-3. Open KAI Assistant. Select an installed model or install one in Core → Models and refresh the plugin's model list.
-4. Start a conversation or open an existing one. Use **Ctrl/⌘ + Enter** to send.
-
-Both Core and the legacy app use the same underlying chat folder. Close the other app before starting Core. Deleting a conversation also deletes it from that shared history. Uninstalling this plugin does not delete saved conversations.
-
-If a save fails, the visible text stays in the current window. Use **Save again** before switching chats or closing the window. If the saved record changed elsewhere, **Save text as new chat** keeps the visible text in a separate conversation while leaving the original and its attachments unchanged. A corrupt or unsafe legacy file is reported and never silently replaced. Very large histories may need to be opened in the legacy app; their original files remain intact.
-
-## Capabilities
-
-| Permission | Purpose |
-| --- | --- |
-| `models.read` | List ready local models |
-| `inference.local` | Request a text reply from the selected local model |
-| `assistant.read` | List and read the shared saved conversation history |
-| `assistant.write` | Append messages, rename/favorite, and confirm deletion of a conversation |
-| `storage.read`, `storage.write` | Save plugin model and reply-limit preferences |
-
-The renderer has no Node.js, filesystem, microphone, wallet, account-token, or direct network access. The reviewed Assistant broker in Core performs bounded, revision-checked, atomic edits to shared history and preserves unknown legacy fields.
+Saved conversations stay in the existing Koinos AI profile. Images, citations, personas and unknown legacy metadata are retained. Changed or corrupt records are not silently overwritten. Core and the earlier app must not run against that profile together.
 
 ## Development
 
-The plugin is plain HTML, CSS, and JavaScript with no build dependencies. Run `npm test` to verify context selection and local model filtering. `plugin/manifest.json` defines the entry point and permissions; every file in `plugin/` is part of the signed package.
-
-A Core checkout is needed only for native integration tests and package signing. Core's Assistant service tests exercise real temporary ChatStore files, corruption refusal, stale revisions, preserved attachments, symlink rejection, and confirmation behavior. The release workflow verifies the pre-signed package against the publisher key and exact source contents before publishing. Never place publisher private keys in source control.
+Run `npm test`. Core contains service, streaming, native sender, storage-preservation and desktop integration checks. Core and this plugin must be updated together for the restored feature APIs. Releases are signed by the existing KAI publisher; private signing keys never belong in this repository.

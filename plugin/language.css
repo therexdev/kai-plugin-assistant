@@ -1,0 +1,20 @@
+html.language-loading #app { visibility: hidden; }
+#language-dialog { color: #eef2f8; background: #121a26; border: 1px solid #35445b; border-radius: 20px; padding: 30px; width: min(440px, calc(100vw - 48px)); max-height: calc(100dvh - 48px); margin: auto; box-sizing: border-box; box-shadow: 0 24px 90px #0008; }
+#language-dialog::backdrop { background: #05080de8; }
+#language-dialog h1 { font-size: 27px; line-height: 1.2; margin: 10px 0 14px; }
+#language-dialog p { color: #b9c7db; line-height: 1.6; margin: 10px 0; }
+#language-dialog label { display: block; margin: 22px 0 9px; font-weight: 600; }
+#language-dialog select { width: 100%; padding: 13px; font-size: 17px; color: #eef2f8; background: #1b2637; border: 1px solid #647895; border-radius: 9px; }
+#language-dialog button { width: 100%; margin-top: 22px; padding: 13px; font-size: 16px; }
+#language-dialog .language-symbol { font-size: 32px; color: #ffd45c; }
+#language-dialog .error { color: #ff9d9d; }
+#language-dialog :focus-visible { outline: 2px solid #ffd45c; outline-offset: 4px; }
+.language-setting { margin: 20px 0 28px; padding-bottom: 20px; border-bottom: 1px solid #ffffff18; }
+.language-setting label { display: block; margin-bottom: 9px; }
+.language-setting select { min-width: 220px; max-width: 100%; }
+/* Translated labels can be longer. Keep every control reachable. */
+.nav-item span, .rail-icon span { overflow-wrap: anywhere; }
+.provider-buttons, .modal-actions { flex-wrap: wrap; }
+.rail-icons { flex-wrap: wrap; }
+.rail-icon { flex-basis: 100%; justify-content: flex-start; padding-inline: 12px; }
+.rail-icon span { overflow-wrap: normal; }
