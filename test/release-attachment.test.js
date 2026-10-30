@@ -1,0 +1,21 @@
+"use strict";
+const test = require("node:test"), assert = require("node:assert/strict"), fs = require("node:fs"), path = require("node:path"), os = require("node:os"), crypto = require("node:crypto"), { spawnSync } = require("node:child_process"), { signingPayload } = require("../scripts/package-format");
+test("detached release attachment verifies provenance and current source before publication", t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "assistant-release-fixture-")); t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const put = (name, value) => { const file = path.join(dir, name); fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, value); };
+  for (const name of ["package-format.js", "release-provenance.js", "attach-signature.js", "verify-package.js"]) put("scripts/" + name, fs.readFileSync(path.join(__dirname, "../scripts", name)));
+  const manifest = require("../plugin/manifest.json"), files = { "index.html": "<p>fixture</p>", "service/index.js": "module.exports={};" };
+  for (const name of ["onnxruntime-node", "sherpa-onnx-win-x64", "sherpa-onnx-linux-x64", "sherpa-onnx-darwin-x64", "sherpa-onnx-darwin-arm64"]) files["service/node_modules/" + name + "/package.json"] = "{}";
+  for (const name of ["service/resources/live-senses/turn/smart-turn-v3.2-cpu.onnx", "service/build/bin/kai-windows-voice.exe", "service/build/bin/kai-computer.exe"]) files[name] = Buffer.from("test fixture only").toString("base64");
+  const raw = JSON.stringify({ manifest, files }), signing = Buffer.from(signingPayload(manifest, files)), pair = crypto.generateKeyPairSync("ed25519"), publicKey = pair.publicKey.export({ type: "spki", format: "der" }).toString("base64"), sourceCommit = "8fa0cb7da12ccc14836ca49af6cd39c808efdb2b", payloadSha256 = crypto.createHash("sha256").update(raw).digest("hex");
+  put("publisher.json", JSON.stringify({ id: manifest.id, publicKey })); put("plugin/manifest.json", JSON.stringify(manifest)); put("plugin/index.html", files["index.html"]); put("plugin/service/index.js", files["service/index.js"]);
+  put(".build/unsigned-plugin.json", raw);
+  const metadata = { schema: 1, sourceCommit, id: manifest.id, version: manifest.version, files: Object.keys(files).length, bytes: Buffer.byteLength(raw), payloadSha256, signingSha256: crypto.createHash("sha256").update(signing).digest("hex") };
+  put(".build/unsigned-metadata.json", JSON.stringify(metadata));
+  put("release-signature.json", JSON.stringify({ schema: 1, buildRunId: 41136390866, sourceCommit, payloadSha256, publicKey, signature: crypto.sign(null, signing, pair.privateKey).toString("base64") }));
+  const run = name => spawnSync(process.execPath, [path.join(dir, "scripts", name)], { cwd: dir, encoding: "utf8" });
+  let result = run("attach-signature.js"); assert.equal(result.status, 0, result.stderr);
+  result = run("verify-package.js"); assert.equal(result.status, 0, result.stderr);
+  put("plugin/service/index.js", "module.exports={changed:true};"); result = run("verify-package.js"); assert.notEqual(result.status, 0); assert.match(result.stderr, /Source changed since payload build/);
+  put(".build/unsigned-metadata.json", JSON.stringify({ ...metadata, sourceCommit: "0".repeat(40) })); result = run("attach-signature.js"); assert.notEqual(result.status, 0); assert.match(result.stderr, /Artifact belongs to another source commit/);
+});

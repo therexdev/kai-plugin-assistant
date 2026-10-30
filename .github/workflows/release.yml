@@ -26,9 +26,14 @@ jobs:
         run: |
           test -f release-signature.json
           run=$(node -p "require('./release-signature.json').buildRunId")
+          mkdir -p .build
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" > .build/reviewed-run.json
+          node scripts/verify-reviewed-run.js
           gh run download "$run" --name assistant-unsigned-payload --dir .build
       - name: Attach detached publisher signature and verify payload
-        run: node --max-old-space-size=4096 scripts/attach-signature.js
+        run: |
+          node --max-old-space-size=4096 scripts/attach-signature.js
+          node --max-old-space-size=4096 scripts/verify-package.js
       - name: Publish immutable installable package
         env:
           GH_TOKEN: ${{ github.token }}
