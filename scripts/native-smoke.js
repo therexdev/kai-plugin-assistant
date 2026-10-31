@@ -8,7 +8,7 @@ let service, win; const lifetime = new AbortController(), settings = new Map(), 
 app.whenReady().then(async () => {
   protocol.handle("kai-plugin", request => { const url = new URL(request.url), name = decodeURIComponent(url.pathname.slice(1)); if (url.hostname !== "kai.assistant" || name.includes("..")) return new Response("Not found", { status: 404 }); const file = path.join(root, name); if (!fs.existsSync(file) || !fs.statSync(file).isFile()) return new Response("Not found", { status: 404 }); const ext = path.extname(file), types = { ".js": "text/javascript", ".css": "text/css", ".html": "text/html", ".svg": "image/svg+xml", ".png": "image/png" }; return new Response(fs.readFileSync(file), { headers: { "content-type": types[ext] || "text/plain" } }); });
   win = new BrowserWindow({ width: 1100, height: 780, show: false, webPreferences: { preload: path.join(__dirname, "native-smoke-preload.js"), sandbox: true, contextIsolation: true, nodeIntegration: false } });
-  const api = { version: 1, plugin: { id: "kai.assistant", version: "0.3.0", root, dataDir: path.join(profile, "assistant") }, signal: lifetime.signal,
+  const api = { version: 1, plugin: { id: "kai.assistant", version: JSON.parse(fs.readFileSync(path.join(root, "manifest.json"))).version, root, dataDir: path.join(profile, "assistant") }, signal: lifetime.signal,
     models: { list: () => [{ alias: "smoke-local", label: "Smoke local model", status: "ready" }], status: () => ({ state: "idle" }), ensure: async () => ({ loaded: true }), request: async () => new Response('data: {"choices":[{"delta":{"content":"Fixture reply"}}]}\n\ndata: [DONE]\n\n', { headers: { "content-type": "text/event-stream" } }) },
     network: { status: () => ({ privacyMode: "local-only" }), models: async () => ({ models: [] }), configure: async input => input, fetch: async () => { throw Error("Fixture egress blocked"); } },
     settings: { get: (key, fallback) => settings.has(key) ? settings.get(key) : fallback, set: (key, value) => settings.set(key, value) },
@@ -18,7 +18,11 @@ app.whenReady().then(async () => {
     services: { provide: () => () => {}, call: async name => { throw Object.assign(Error("Install and enable a plugin providing " + name), { code: "SERVICE_UNAVAILABLE" }); } }, log: (level, message) => console.log(level + ": " + message) };
   fs.mkdirSync(api.plugin.dataDir, { recursive: true }); service = require(path.join(root, "service/index.js")).create(api);
   ipcMain.handle("assistant-smoke:call", async (event, method, input) => { if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame) throw Error("Invalid fixture caller"); if (method === "storage.get") return state.get(input.key) ?? null; if (method === "storage.set") { state.set(input.key, input.value); return true; } if (method === "models.list") return api.models.list(); return service.call(method, input, lifetime.signal); });
+  // Simulate Core's asynchronous dialog bridge without granting any action.
+  ipcMain.handle("assistant-smoke:dialog", async (event, kind, message) => { if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame) throw Error("Invalid fixture caller"); assert.ok(["confirm", "alert"].includes(kind)); assert.equal(typeof message, "string"); return kind === "confirm" ? false : undefined; });
   await win.loadURL("kai-plugin://kai.assistant/index.html"); win.show(); await service.startBackground();
+  assert.equal(await win.webContents.executeJavaScript('window.kai.dialogs.confirm("Fixture approval").then(value => value === false)'), true, "Renderer cancellation crosses the asynchronous dialog bridge");
+  await win.webContents.executeJavaScript('window.kai.dialogs.alert("Fixture notice")');
   await service.call("assistant.native", { action: "mascot:launch", args: [{ model: "smoke-local" }] }, lifetime.signal);
   const mascot = BrowserWindow.getAllWindows().find(w => w !== win && /\/mascot.html$/.test(w.webContents.getURL())); assert.ok(mascot, "Desktop companion opens");
   await new Promise(resolve => setTimeout(resolve, 750));

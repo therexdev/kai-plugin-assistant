@@ -1,9 +1,11 @@
-# Assistant 0.3.0 — Foundation architecture
+# KAI Assistant 0.3.1
 
-Assistant now ships its own chat storage, provider connections, speech engines, desktop companion, native controls, assets and dependencies. It uses Foundation's documented services and runs while KAI remains open or in the tray.
+Requires KAI Core 0.7.3 or later. Update Core before installing this plugin update.
 
-Brain, connected accounts, saved workflows, and tool execution communicate through explicit plugin services. Selected conversation sharing and workflow-output grants are reviewable and revocable in Assistant Settings.
+Tool approvals, Analyst execution consent, voice setup approval and memory-save errors now use Core’s styled dialogs. Confirmations wait for the actual answer, and cancelling leaves the requested approval off. Voice setup cannot open duplicate approval dialogs while a response is pending.
 
-This is a fresh architecture and data profile. Existing application data is untouched; no migration is performed. Native Assistant code requires full computer/application trust. Renderers remain sandboxed, with exact frame checks and native reviews for sensitive operations.
+The language dialog now matches the app’s light colors and font. The run-budget dialog has a clear close button and grouped actions. Closing or pressing Escape after reopening a budget review cannot reuse an earlier approval.
 
-A universal release requires the dependency build, all supported platform helpers, signature verification, and native checks. The source checkout alone is not an installable native payload.
+Chat, agents and research, desktop providers, speech engines and the desktop companion retain their existing features and plugin-owned data. Native execution still requires explicit full computer/application trust; renderer sandboxing and sensitive-action reviews remain in place.
+
+The release uses the existing universal payload build and external detached-signature review. Runtime dependencies and native-helper build versions are unchanged.

@@ -134,7 +134,7 @@ document.addEventListener("drop", (e) => {
       return false;
     }
     const mb = Math.max(1, Math.round((s.downloadBytes || 0) / 1e6));
-    if (!confirm(`Set up voice input?\n\nOne-time download (~${mb} MB). After that, speech is transcribed entirely on this machine — audio never leaves it.`)) return false;
+    if (!await window.kai.dialogs.confirm(`Set up voice input?\n\nOne-time download (~${mb} MB). After that, speech is transcribed entirely on this machine — audio never leaves it.`, { title: "Set up voice input?", confirmLabel: "Download speech engine" })) return false;
     await fetch("/core/voice/setup", { method: "POST" });
     btn.classList.add("busy");
     flash("Setting up voice input — downloading the speech engine…", true);
@@ -219,9 +219,16 @@ document.addEventListener("drop", (e) => {
     }
   }
 
-  btn.addEventListener("click", () => {
+  btn.addEventListener("click", async () => {
     if (busy) return;
-    if (rec) stopRecording();
-    else startRecording();
+    busy = true;
+    try {
+      if (rec) await stopRecording();
+      else await startRecording();
+    } catch (error) {
+      flash(`Voice input failed: ${String(error.message || error).slice(0, 120)}`);
+    } finally {
+      busy = false;
+    }
   });
 })();

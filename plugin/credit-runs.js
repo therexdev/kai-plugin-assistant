@@ -1,8 +1,8 @@
 "use strict";
 (() => {
   const bridge = window.kaiKoinTestBridge; if (!bridge) return;
-  const dialog = document.createElement("dialog"); dialog.id = "credit-run-review";
-  dialog.innerHTML = '<form method="dialog"><h2>Set a total run budget</h2><p>Research, Agents and Teams can make several AI calls. This one ceiling covers every model call and retry. Local tools add no network-credit charge; their permissions still apply.</p><label>Total credits <input id="credit-run-budget" inputmode="decimal" autocomplete="off" required /></label><label><input id="credit-run-free-only" type="checkbox" /> Free only</label><p id="credit-run-cost">Free credits are used first. Unless Free only is selected, purchased credits may cover the rest, up to this total budget.</p><p>Stop ends new work. Verified delivered work is charged once; useful partial results are saved in Account help → Research &amp; agent results.</p><p id="credit-run-error" role="alert"></p><button value="cancel" formnovalidate>Cancel</button><button id="credit-run-start" value="start" class="primary">Start within this budget</button></form>';
+  const dialog = document.createElement("dialog"); dialog.id = "credit-run-review"; dialog.setAttribute("aria-labelledby", "credit-run-title");
+  dialog.innerHTML = '<form method="dialog"><header class="credit-run-heading"><h2 id="credit-run-title">Set a total run budget</h2><button class="credit-run-close" value="cancel" formnovalidate aria-label="Cancel run budget">×</button></header><p>Research, Agents and Teams can make several AI calls. This one ceiling covers every model call and retry. Local tools add no network-credit charge; their permissions still apply.</p><label>Total credits <input id="credit-run-budget" inputmode="decimal" autocomplete="off" required /></label><label><input id="credit-run-free-only" type="checkbox" /> Free only</label><p id="credit-run-cost">Free credits are used first. Unless Free only is selected, purchased credits may cover the rest, up to this total budget.</p><p>Stop ends new work. Verified delivered work is charged once; useful partial results are saved in Account help → Research &amp; agent results.</p><p id="credit-run-error" role="alert"></p><div class="credit-run-actions"><button value="cancel" formnovalidate>Cancel</button><button id="credit-run-start" value="start" class="primary">Start within this budget</button></div></form>';
   document.body.appendChild(dialog);
   const saved = document.createElement("details"); saved.id = "credit-run-results"; saved.innerHTML = '<summary>Research &amp; agent results</summary><p>Saved responses from Research, Agents and Teams, including useful results from interrupted runs.</p><div id="credit-run-history"></div>';
   // Recovery belongs with account history, not beside every network message.
@@ -19,6 +19,7 @@
       if (Array.isArray(info.models) && !selected?.available) throw Error("Choose an available network model before starting this run.");
       document.getElementById("credit-run-error").textContent = "";
       document.getElementById("credit-run-free-only").checked = false; paintCost();
+      dialog.returnValue = ""; // Escape must never reuse a previous approval.
       const accepted = await new Promise(resolve => { dialog.addEventListener("close", () => resolve(dialog.returnValue === "start"), { once: true }); dialog.showModal(); });
       if (!accepted) return false;
       const budget = document.getElementById("credit-run-budget").value.trim(), freeOnly = document.getElementById("credit-run-free-only").checked;

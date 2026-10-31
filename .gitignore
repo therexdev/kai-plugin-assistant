@@ -3,3 +3,7 @@ node_modules/
 .env
 
 .build/
+
+# Generated signed packages and interrupted local attachment/download files.
+/dist/*.kaiplugin
+/dist/.*.kaiplugin.*

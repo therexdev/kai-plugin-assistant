@@ -1,15 +1,15 @@
 html.language-loading #app { visibility: hidden; }
-#language-dialog { color: #eef2f8; background: #121a26; border: 1px solid #35445b; border-radius: 20px; padding: 30px; width: min(440px, calc(100vw - 48px)); max-height: calc(100dvh - 48px); margin: auto; box-sizing: border-box; box-shadow: 0 24px 90px #0008; }
-#language-dialog::backdrop { background: #05080de8; }
+#language-dialog { font: inherit; color: var(--text, #193457); background: var(--bg-raised, #fff); border: 1px solid var(--border, #dce6f4); border-radius: 20px; padding: 30px; width: min(440px, calc(100vw - 48px)); max-height: calc(100dvh - 48px); margin: auto; box-sizing: border-box; box-shadow: 0 24px 90px #18304f26; }
+#language-dialog::backdrop { background: #18304d55; backdrop-filter: blur(3px); }
 #language-dialog h1 { font-size: 27px; line-height: 1.2; margin: 10px 0 14px; }
-#language-dialog p { color: #b9c7db; line-height: 1.6; margin: 10px 0; }
+#language-dialog p { color: var(--text-dim, #5e7392); line-height: 1.6; margin: 10px 0; }
 #language-dialog label { display: block; margin: 22px 0 9px; font-weight: 600; }
-#language-dialog select { width: 100%; padding: 13px; font-size: 17px; color: #eef2f8; background: #1b2637; border: 1px solid #647895; border-radius: 9px; }
-#language-dialog button { width: 100%; margin-top: 22px; padding: 13px; font-size: 16px; }
-#language-dialog .language-symbol { font-size: 32px; color: #ffd45c; }
-#language-dialog .error { color: #ff9d9d; }
-#language-dialog :focus-visible { outline: 2px solid #ffd45c; outline-offset: 4px; }
-.language-setting { margin: 20px 0 28px; padding-bottom: 20px; border-bottom: 1px solid #ffffff18; }
+#language-dialog select { width: 100%; padding: 13px; font: inherit; color: var(--text, #193457); background: var(--bg-input, #f5f8fd); border: 1px solid var(--border, #dce6f4); border-radius: 9px; }
+#language-dialog button { width: 100%; margin-top: 22px; padding: 13px; font: inherit; }
+#language-dialog .language-symbol { font-size: 32px; color: var(--violet, #155eef); }
+#language-dialog .error { color: var(--danger, #bd3546); }
+#language-dialog :focus-visible { outline: 2px solid var(--violet, #155eef); outline-offset: 4px; }
+.language-setting { margin: 20px 0 28px; padding-bottom: 20px; border-bottom: 1px solid var(--border, #dce6f4); }
 .language-setting label { display: block; margin-bottom: 9px; }
 .language-setting select { min-width: 220px; max-width: 100%; }
 /* Translated labels can be longer. Keep every control reachable. */

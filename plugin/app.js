@@ -190,7 +190,7 @@ async function askModelOnce(messages, model) {
 function confirmTool(name, args) {
   const pretty = name.replace(/^mcp:[^:]+:/, "");
   const detail = Object.entries(args || {}).map(([k, v]) => `${k}: ${String(v).slice(0, 120)}`).join("\n");
-  return Promise.resolve(window.confirm(`The AI wants to use a tool:\n\n${pretty}\n${detail ? "\n" + detail + "\n" : ""}\nAllow it this once?`));
+  return window.kai.dialogs.confirm(`The AI wants to use a tool:\n\n${pretty}\n${detail ? "\n" + detail + "\n" : ""}\nAllow it this once?`, { title: "Allow this tool?", confirmLabel: "Allow once" });
 }
 
 // ---- web search toggle (persisted like other renderer prefs) ----
@@ -725,7 +725,7 @@ $("messages").addEventListener("click", async (e) => {
       KaiI18n.setText(act, "📌 Remembered");
       setTimeout(() => (KaiI18n.setText(act, "📌 Remember")), 1600);
     } catch (error) {
-      alert(error.message || "Brain could not save this memory.");
+      await window.kai.dialogs.alert(error.message || "Brain could not save this memory.", { title: "Memory could not be saved" });
       KaiI18n.setText(act, "📌 Remember");
     }
   }
@@ -819,8 +819,9 @@ async function send(replayText) {
       // plain words before anything executes.
       let allowSensitive = false;
       if (template === "analyst") {
-        allowSensitive = confirm(
-          "The Analyst team writes and runs code in the sandbox (its own scratch folder, no network, no other programs). Allow for this run?"
+        allowSensitive = await window.kai.dialogs.confirm(
+          "The Analyst team writes and runs code in the sandbox (its own scratch folder, no network, no other programs). Allow for this run?",
+          { title: "Allow Analyst code execution?", confirmLabel: "Allow for this run" }
         );
       }
       const teamBody = { template, question: text, model: chatModel, allowSensitive };
