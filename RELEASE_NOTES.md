@@ -1,11 +1,9 @@
-# KAI Assistant 0.3.2
+# KAI Assistant 0.3.3
 
-Requires KAI Core 0.7.3 or later. Update Core before installing this plugin update.
+Restores the robot artwork and gradient **Open KAI** button in the upper-right corner. Buttons throughout Assistant use consistent typography, spacing, focus states and gradients while keeping the existing workspace layout.
 
-Fixes Windows launch failures reporting “Plugin code contains an unverified file” after voice or turn detection had been used. These engines now find existing Windows or Electron runtime libraries through their isolated process environment instead of copying DLLs into the signed plugin package. Filesystem caching is also disabled for local speech-model reads.
+Fixes chat streams that stop updating when the model briefly has no output. Cancellation also reaches requests waiting for response headers, and late responses are cleaned up without affecting other work.
 
-Updating installs a freshly verified code snapshot while keeping Assistant conversations, settings, connected providers and downloaded voices in the same plugin data folder. Earlier code snapshots and unknown files are not deleted or trusted.
+Use KAI Core Beta 0.7.9 or later for the matching shared-model queue, preparation and startup responsiveness fixes. Conversations, provider settings and downloaded voices stay in the same plugin data folder.
 
-Release checks now run native dependency loading and turn inference twice from read-only runtime files, verify every file remains unchanged, and repeat desktop companion startup using the real Electron utility process. These checks use temporary profiles and synthetic audio; they do not access live accounts, microphones or user data.
-
-The release uses the existing universal payload build and external detached-signature review. Runtime dependencies and native-helper build versions are unchanged.
+This release retains the reviewed universal native payload, external publisher signature and cross-platform native companion checks. No live accounts, microphones or user data are used in release tests.

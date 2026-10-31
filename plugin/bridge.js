@@ -53,26 +53,67 @@
       let text = ""; for (let i = 0; i < bytes.length; i += 32768) text += String.fromCharCode(...bytes.subarray(i, i + 32768));
       bodyBase64 = btoa(text); body = undefined;
     }
-    const result = await window.kai.call("assistant.request", { path, method: init.method || "GET", headers, ...(body === undefined ? {} : { body }), ...(bodyBase64 === undefined ? {} : { bodyBase64 }), stream: true });
-    if (!result.streamId) return new Response(result.bodyBase64 ? Uint8Array.from(atob(result.bodyBase64), c => c.charCodeAt(0)) : typeof result.body === "string" ? result.body : JSON.stringify(result.body), { status: result.status, headers: result.headers });
-    const streamId = result.streamId; let ended = false;
-    const cancel = () => { if (!ended) void window.kai.call("assistant.cancel", { streamId }).catch(() => {}); };
-    init.signal?.addEventListener("abort", cancel, { once: true });
-    const stream = new ReadableStream({
-      async pull(controller) {
-        if (ended) return;
-        try {
-          init.signal?.throwIfAborted();
-          await new Promise(resolve => setTimeout(resolve, 100));
-          const next = await window.kai.call("assistant.poll", { streamId });
-          init.signal?.throwIfAborted();
-          if (next.error) throw Error(next.error);
-          for (const chunk of next.chunks || []) controller.enqueue(new TextEncoder().encode(chunk));
-          if (next.done) { ended = true; init.signal?.removeEventListener("abort", cancel); controller.close(); }
-        } catch (error) { cancel(); ended = true; init.signal?.removeEventListener("abort", cancel); controller.error(error); }
-      },
-      cancel() { cancel(); ended = true; init.signal?.removeEventListener("abort", cancel); },
-    });
-    return new Response(stream, { status: result.status, headers: result.headers });
+    init.signal?.throwIfAborted();
+    const requestId = crypto.randomUUID();
+    let streamId, ended = false, controller, abortReject, cancelledStream;
+    const cleanup = () => init.signal?.removeEventListener("abort", onAbort);
+    const cancelNative = () => {
+      const key = streamId || requestId;
+      if (cancelledStream === key) return;
+      cancelledStream = key;
+      void window.kai.call("assistant.cancel", { requestId, ...(streamId ? { streamId } : {}) }).catch(() => {});
+    };
+    const aborted = new Promise((_resolve, reject) => { abortReject = reject; });
+    const abortReason = () => init.signal?.reason || new DOMException("The request was stopped.", "AbortError");
+    const onAbort = () => {
+      if (ended) return;
+      cancelNative(); ended = true; cleanup();
+      const error = abortReason(); abortReject(error); controller?.error(error);
+    };
+    init.signal?.addEventListener("abort", onAbort, { once: true });
+    let pending;
+    try {
+      init.signal?.throwIfAborted();
+      pending = window.kai.call("assistant.request", { requestId, path, method: init.method || "GET", headers, ...(body === undefined ? {} : { body }), ...(bodyBase64 === undefined ? {} : { bodyBase64 }), stream: true });
+      // A cancelled request can still return headers if the underlying provider
+      // finishes at the same moment. Release that late stream as well.
+      pending.then(result => { if (ended && result?.streamId) { streamId = result.streamId; cancelNative(); } }, () => {});
+      const result = await Promise.race([pending, aborted]);
+      init.signal?.throwIfAborted();
+      if (!result.streamId) {
+        ended = true; cleanup();
+        return new Response(result.bodyBase64 ? Uint8Array.from(atob(result.bodyBase64), c => c.charCodeAt(0)) : typeof result.body === "string" ? result.body : JSON.stringify(result.body), { status: result.status, headers: result.headers });
+      }
+      streamId = result.streamId;
+      const stream = new ReadableStream({
+        start(value) { controller = value; },
+        async pull() {
+          try {
+            // A pending read must keep waiting through empty polls. Returning
+            // without enqueue/close can leave the reader waiting indefinitely.
+            while (!ended) {
+              await Promise.race([new Promise(resolve => setTimeout(resolve, 100)), aborted]);
+              if (ended) return;
+              const next = await Promise.race([window.kai.call("assistant.poll", { streamId }), aborted]);
+              if (ended) return;
+              init.signal?.throwIfAborted();
+              if (next.error) throw Error(next.error);
+              const chunks = (next.chunks || []).filter(chunk => chunk.length > 0);
+              for (const chunk of chunks) controller.enqueue(new TextEncoder().encode(chunk));
+              if (next.done) { ended = true; cleanup(); controller.close(); }
+              if (chunks.length || next.done) return;
+            }
+          } catch (error) {
+            if (ended) return;
+            cancelNative(); ended = true; cleanup(); controller.error(error);
+          }
+        },
+        cancel() { if (!ended) cancelNative(); ended = true; cleanup(); abortReject(new DOMException("The response was stopped.", "AbortError")); },
+      });
+      return new Response(stream, { status: result.status, headers: result.headers });
+    } catch (error) {
+      if (pending && !ended) cancelNative();
+      ended = true; cleanup(); throw error;
+    }
   };
 })();

@@ -2,6 +2,7 @@
 const path = require("node:path"), crypto = require("node:crypto"), fs = require("node:fs"), http = require("node:http");
 const { searchWeb, fetchPage } = require("./core/lib/websearch");
 const MAX_REQUEST = 16 * 1024 * 1024, MAX_STREAM = 8 * 1024 * 1024;
+const REQUEST_ID = /^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,127}$/;
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".webp": "image/webp", ".json": "application/json", ".wasm": "application/wasm", ".onnx": "application/octet-stream" };
 const json = (body, status = 200) => ({ ok: status >= 200 && status < 300, status, headers: { "content-type": "application/json" }, body });
 function normalize(input) {
@@ -17,7 +18,7 @@ function normalize(input) {
   return { url, method, bytes, body };
 }
 function createRuntime(api, electron) {
-  const streams = new Map(), staticAssets = new Map(), controllers = new Set(); let stopped = false, server, port, starting, voice, speech, turn, clientRequest;
+  const streams = new Map(), requests = new Map(), cancelled = new Map(), staticAssets = new Map(), controllers = new Set(); let stopped = false, server, port, starting, voice, speech, turn, clientRequest;
   const secret = crypto.randomBytes(32).toString("hex");
   const mascotSession = electron.session.fromPartition("kai-assistant-" + crypto.randomUUID());
   mascotSession.setPermissionRequestHandler((_wc, _p, cb) => cb(false)); mascotSession.setPermissionCheckHandler(() => false);
@@ -42,24 +43,48 @@ function createRuntime(api, electron) {
       let body = bytes.toString("utf8"); try { body = JSON.parse(body); } catch {} return { ok: response.ok, status: response.status, headers, body };
     }
     if (streams.size >= 16) { controller.abort(); throw Error("Finish an active response first"); }
-    const id = crypto.randomUUID(), reader = response.body.getReader(), decoder = new TextDecoder(), record = { controller, chunks: [], bytes: 0, done: false, lastPoll: Date.now() };
+    const id = crypto.randomUUID(), reader = response.body.getReader(), decoder = new TextDecoder(), record = { controller, reader, chunks: [], bytes: 0, done: false, lastPoll: Date.now() };
     streams.set(id, record);
     record.task = (async () => { try { while (true) { const next = await reader.read(); if (next.done) break; const text = decoder.decode(next.value, { stream: true }); record.bytes += Buffer.byteLength(text); if (record.bytes > MAX_STREAM) throw Error("Response buffer is full"); record.chunks.push(text); } const tail = decoder.decode(); if (tail) record.chunks.push(tail); } catch (error) { record.error = error.message; controller.abort(); } finally { record.done = true; reader.releaseLock(); } })();
     return { ok: response.ok, status: response.status, headers, streamId: id };
   }
-  const expiry = setInterval(() => { for (const [id, record] of streams) if (Date.now() - record.lastPoll > 120000) { record.controller?.abort(); streams.delete(id); } }, 30000); expiry.unref?.();
+  function expireCancelled() { for (const [id, at] of cancelled) if (Date.now() - at > 120000) cancelled.delete(id); }
+  const expiry = setInterval(() => { expireCancelled(); for (const [id, record] of streams) if (Date.now() - record.lastPoll > 120000) void cancel(id).catch(() => {}); }, 30000); expiry.unref?.();
   async function request(input, signal) {
+    active(signal);
+    const id = input?.requestId;
+    if (id === undefined) return performRequest(input, signal);
+    if (typeof id !== "string" || !REQUEST_ID.test(id)) throw Error("Invalid Assistant request id");
+    expireCancelled();
+    if (cancelled.has(id)) throw new DOMException("The request was stopped.", "AbortError");
+    if (requests.has(id)) throw Error("Assistant request is already active");
+    if (requests.size >= 32) throw Error("Finish an active Assistant request first");
+    const controller = new AbortController(), record = { controller, streamId: null };
+    requests.set(id, record);
+    const combined = AbortSignal.any([api.signal, controller.signal, ...(signal ? [signal] : [])]);
+    try {
+      const result = await performRequest(input, combined);
+      if (combined.aborted) { if (result.streamId) await cancel(result.streamId); combined.throwIfAborted(); }
+      if (result.streamId) {
+        record.streamId = result.streamId;
+        const stream = streams.get(result.streamId); if (stream) stream.requestId = id;
+      }
+      return result;
+    } finally { if (!record.streamId) requests.delete(id); }
+  }
+  async function performRequest(input, signal) {
     active(signal); signal = AbortSignal.any([api.signal, ...(signal ? [signal] : [])]); const { url, method, bytes, body } = normalize(input), route = url.pathname;
     if (route === "/core/models" && method === "GET") return json({ ok: true, aliases: api.models.list(), runtime: api.runtime?.status?.() || { state: "idle" }, download: null, importStatus: null });
     if (["/core/health", "/core/status"].includes(route) && method === "GET") return json({ ok: true, version: api.plugin.version, runtime: api.runtime?.status?.() || { state: "idle" } });
     if (["/core/network", "/core/network/status"].includes(route) && method === "GET") return json({ ok: true, ...api.network.status() });
     if (route === "/core/network/models" && method === "GET") { const result = await api.network.models(); return json({ ok: true, ...(Array.isArray(result) ? { models: result, workersOnline: result.reduce((n, m) => n + (Number(m.providers) || 0), 0) } : result) }); }
-    if (route === "/core/models/ensure" && method === "POST") return json({ ok: true, ...await api.models.ensure(body) });
+    if (route === "/core/models/ensure" && method === "POST") return json({ ok: true, ...await api.models.ensure(body, signal) });
     if (route === "/core/chat/completions" && method === "POST") {
       const controller = new AbortController(); controllers.add(controller);
       const combined = AbortSignal.any([api.signal, controller.signal, ...(signal ? [signal] : [])]);
       try {
         let response = await api.models.request(body, combined);
+        if (combined.aborted) { await response.body?.cancel().catch(() => {}); combined.throwIfAborted(); }
         if (body.stream !== false && response.ok && /application\/json/.test(response.headers.get("content-type") || "")) {
           const completed = await response.json();
           const answer = completed.choices?.[0]?.message;
@@ -98,12 +123,33 @@ function createRuntime(api, electron) {
   }
   async function poll(id, signal) {
     active(signal); const record = streams.get(id); if (!record) throw Error("Unknown Assistant response"); record.lastPoll = Date.now();
-    if (record.remote) { const out = await api.services.call("kai.tools", "poll", { streamId: record.remote }, { signal }); if (out.done) streams.delete(id); return out; }
+    if (record.remote) { const out = await api.services.call("kai.tools", "poll", { streamId: record.remote }, { signal }); if (out.done) { streams.delete(id); requests.delete(record.requestId); } return out; }
     const chunks = []; let count = 0; while (record.chunks.length && count < 256 * 1024) { const chunk = record.chunks.shift(), size = Buffer.byteLength(chunk); chunks.push(chunk); count += size; record.bytes -= size; }
-    const done = record.done && !record.chunks.length; if (done) { streams.delete(id); controllers.delete(record.controller); }
+    const done = record.done && !record.chunks.length; if (done) { streams.delete(id); controllers.delete(record.controller); requests.delete(record.requestId); }
     return { chunks, done, ...(record.error ? { error: record.error } : {}) };
   }
-  async function cancel(id) { const record = streams.get(id); if (!record) return { stopped: true }; streams.delete(id); record.controller?.abort(); controllers.delete(record.controller); if (record.remote) await api.services.call("kai.tools", "cancel", { streamId: record.remote, requestId: record.requestId }); return { stopped: true }; }
+  async function cancel(value) {
+    const requestId = typeof value === "object" && value ? value.requestId : undefined;
+    let id = typeof value === "string" ? value : value?.streamId;
+    if (requestId !== undefined && (typeof requestId !== "string" || !REQUEST_ID.test(requestId))) throw Error("Invalid Assistant request id");
+    const pending = requests.get(requestId);
+    if (id && pending?.streamId && id !== pending.streamId) throw Error("Assistant response does not belong to this request");
+    if (!id) id = pending?.streamId;
+    const record = streams.get(id);
+    if (requestId && record?.requestId && requestId !== record.requestId) throw Error("Assistant response does not belong to this request");
+    if (requestId) {
+      // IPC cancellation may overtake startup/headers. Remember only a bounded,
+      // short-lived set of IDs so that late registration cannot restart work.
+      expireCancelled(); cancelled.set(requestId, Date.now());
+      while (cancelled.size > 128) cancelled.delete(cancelled.keys().next().value);
+      pending?.controller.abort(new DOMException("The request was stopped.", "AbortError")); requests.delete(requestId);
+    }
+    if (!record) return { stopped: true };
+    streams.delete(id); requests.delete(record.requestId); record.controller?.abort(); controllers.delete(record.controller);
+    await record.reader?.cancel().catch(() => {});
+    if (record.remote) await api.services.call("kai.tools", "cancel", { streamId: record.remote, requestId: record.requestId });
+    return { stopped: true };
+  }
   async function serve(req, res) {
     const fail = (status, message) => { res.writeHead(status, { "content-type": "application/json" }); res.end(JSON.stringify({ ok: false, error: message })); };
     if (stopped || req.headers.host !== `127.0.0.1:${port}` || req.headers["x-kai-assistant-token"] !== secret) return fail(403, "Assistant access denied");
@@ -126,7 +172,7 @@ function createRuntime(api, electron) {
     active(); if (starting) return starting;
     starting = (async () => { engines(); server = http.createServer((req, res) => { serve(req, res).catch(error => { if (!res.headersSent) res.writeHead(500); res.end(); api.log("error", error.message); }); }); server.requestTimeout = 180000; server.headersTimeout = 10000; await new Promise((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", () => { server.removeListener("error", reject); port = server.address().port; resolve(); }); }); })(); return starting;
   }
-  async function dispose() { if (stopped) return; stopped = true; clearInterval(expiry); for (const c of controllers) c.abort(); await Promise.allSettled([...streams.keys()].map(cancel)); speech?.close(); turn?.close(); await starting?.catch(() => {}); if (server) { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); } await mascotSession.clearStorageData(); }
+  async function dispose() { if (stopped) return; stopped = true; clearInterval(expiry); for (const r of requests.values()) r.controller.abort(); for (const c of controllers) c.abort(); await Promise.allSettled([...streams.keys()].map(cancel)); requests.clear(); cancelled.clear(); speech?.close(); turn?.close(); await starting?.catch(() => {}); if (server) { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); } await mascotSession.clearStorageData(); }
   return { ensure, request, poll, cancel, dispose, origin, mascotSession, staticAssets, setClientRequest(fn) { clientRequest = fn; }, get voice() { return voice; }, get speech() { return speech; }, get turn() { return turn; }, get port() { return port; } };
 }
 module.exports = { createRuntime, normalize };

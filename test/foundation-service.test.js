@@ -107,3 +107,63 @@ test("completed network answers are delivered as a real single SSE completion", 
   const result = await runtime.request({ path: "/core/chat/completions", method: "POST", body: { model: "koinos-network:remote", messages: [{ role: "user", content: "hello" }], stream: true } });
   await new Promise(setImmediate); const output = await runtime.poll(result.streamId); const text = output.chunks.join(""); assert.match(text, /actual model result/); assert.match(text, /\[DONE\]/); assert.equal(output.done, true);
 });
+
+test("Assistant can stop a model request before response headers arrive", async t => {
+  const f = fixture(t), runtime = createRuntime(f.api, f.electron); t.after(() => runtime.dispose());
+  let entered, signal; const started = new Promise(resolve => { entered = resolve; });
+  f.api.models.request = async (_body, value) => { signal = value; entered(); return new Promise((_, reject) => value.addEventListener("abort", () => reject(value.reason), { once: true })); };
+  const pending = runtime.request({ requestId: "pending-model", path: "/core/chat/completions", method: "POST", body: { model: "local-test" } });
+  const rejected = assert.rejects(pending, { name: "AbortError" }); await started;
+  await runtime.cancel({ requestId: "pending-model" }); await rejected; assert.equal(signal.aborted, true);
+});
+
+test("Assistant cancellation that precedes registration prevents inference", async t => {
+  const f = fixture(t), runtime = createRuntime(f.api, f.electron); t.after(() => runtime.dispose()); let called = false;
+  f.api.models.request = async () => { called = true; throw Error("Must not run"); };
+  await runtime.cancel({ requestId: "cancel-before-start" });
+  await assert.rejects(runtime.request({ requestId: "cancel-before-start", path: "/core/chat/completions", method: "POST", body: {} }), { name: "AbortError" });
+  assert.equal(called, false);
+});
+
+test("late response headers after cancellation release the returned response body", async t => {
+  const f = fixture(t), runtime = createRuntime(f.api, f.electron); t.after(() => runtime.dispose()); let release, cancelledBody = false;
+  f.api.models.request = () => new Promise(resolve => { release = resolve; });
+  const pending = runtime.request({ requestId: "late-headers", path: "/core/chat/completions", method: "POST", body: {} });
+  const rejected = assert.rejects(pending, { name: "AbortError" });
+  await runtime.cancel({ requestId: "late-headers" });
+  release(new Response(new ReadableStream({ cancel() { cancelledBody = true; } }), { headers: { "content-type": "text/event-stream" } }));
+  await rejected; assert.equal(cancelledBody, true);
+});
+
+test("request cancellation releases an idle stream and cannot target another response", async t => {
+  const f = fixture(t), runtime = createRuntime(f.api, f.electron); t.after(() => runtime.dispose()); let cancelledBodies = 0;
+  f.api.models.request = async () => new Response(new ReadableStream({ cancel() { cancelledBodies++; } }), { headers: { "content-type": "text/event-stream" } });
+  const a = await runtime.request({ requestId: "request-a", path: "/core/chat/completions", method: "POST", body: {} });
+  const b = await runtime.request({ requestId: "request-b", path: "/core/chat/completions", method: "POST", body: {} });
+  await assert.rejects(runtime.cancel({ requestId: "request-a", streamId: b.streamId }), /does not belong/); assert.equal(cancelledBodies, 0);
+  await runtime.cancel({ requestId: "request-a" }); assert.equal(cancelledBodies, 1);
+  await assert.rejects(runtime.poll(a.streamId), /Unknown/); assert.equal((await runtime.poll(b.streamId)).done, false);
+  await runtime.cancel({ streamId: b.streamId }); assert.equal(cancelledBodies, 2);
+});
+
+test("pending request tracking is bounded and cancelled requests free their slots", async t => {
+  const f = fixture(t), runtime = createRuntime(f.api, f.electron); t.after(() => runtime.dispose());
+  f.api.models.request = async (_body, signal) => new Promise((_, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true }));
+  const pending = Array.from({ length: 32 }, (_, i) => runtime.request({ requestId: "pending-" + i, path: "/core/chat/completions", method: "POST", body: {} }));
+  const results = Promise.allSettled(pending);
+  await assert.rejects(runtime.request({ requestId: "over-limit", path: "/core/chat/completions", method: "POST", body: {} }), /Finish an active/);
+  await Promise.all(pending.map((_, i) => runtime.cancel({ requestId: "pending-" + i }))); assert.equal((await results).every(r => r.status === "rejected"), true);
+  assert.equal((await runtime.request({ requestId: "after-cancel", path: "/core/models" })).status, 200);
+});
+
+test("stopping model preparation reaches the Foundation load request signal", async t => {
+  const f = fixture(t), runtime = createRuntime(f.api, f.electron); t.after(() => runtime.dispose());
+  let entered; const started = new Promise(resolve => { entered = resolve; });
+  f.api.models.ensure = async (body, signal) => {
+    assert.equal(body.alias, "local-test"); entered();
+    return new Promise((_, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true }));
+  };
+  const pending = runtime.request({ requestId: "prepare-model", path: "/core/models/ensure", method: "POST", body: { alias: "local-test" } });
+  const rejected = assert.rejects(pending, { name: "AbortError" }); await started;
+  await runtime.cancel({ requestId: "prepare-model" }); await rejected;
+});

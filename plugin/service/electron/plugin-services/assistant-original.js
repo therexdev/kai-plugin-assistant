@@ -79,7 +79,7 @@ function create(ctx, files) {
       signal?.throwIfAborted(); if (disposed) throw Error("Assistant is closing");
       if (method === "assistant.request") return request(input, signal);
       if (method === "assistant.poll") return ctx.runtimePoll( input.streamId, signal);
-      if (method === "assistant.cancel") return ctx.runtimeCancel( input.streamId);
+      if (method === "assistant.cancel") return ctx.runtimeCancel({ streamId: input.streamId, requestId: input.requestId });
       if (method === "assistant.native") return (native ||= require("./assistant-native").create(ctx)).call(input, signal);
       if (method === "assistant.payment") {
         if (!PAYMENT_ACTIONS.has(input.action)) throw Error("This payment action is unavailable to Assistant");

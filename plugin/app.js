@@ -1283,7 +1283,16 @@ refreshChatList();
 
 
 function esc(s) { return String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`); }
-function showView(name) { for (const view of document.querySelectorAll('.view')) view.hidden = view.id !== 'view-' + name; $('workspace-title').textContent = name === 'settings' ? 'Settings' : name === 'recovery' ? 'Saved results' : 'Chat with KAI'; }
+function showView(name) {
+  for (const view of document.querySelectorAll('.view')) view.hidden = view.id !== 'view-' + name;
+  $('workspace-title').textContent = name === 'settings' ? 'Settings' : name === 'recovery' ? 'Saved results' : 'Chat with KAI';
+  const selected = name === 'settings' || name === 'recovery' ? 'settings' : 'chat';
+  for (const button of document.querySelectorAll('.assistant-nav [data-view]')) {
+    const active = button.dataset.view === selected;
+    button.classList.toggle('active', active);
+    if (active) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
+  }
+}
 function activateView(name) { if (!['chat','onboarding','settings','recovery'].includes(name)) { void window.kai.call('assistant.navigate',{view:name}); return; } state.view=name;state.routed=true;showView(name);if(name==='settings')void KaiProviders.renderSettings(); }
 for (const b of document.querySelectorAll('[data-view]')) b.addEventListener('click',()=>activateView(b.dataset.view));
 refresh();
