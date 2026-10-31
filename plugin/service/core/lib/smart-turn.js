@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const { EventEmitter } = require("events");
 const { Worker } = require("worker_threads");
+const { nativeLibraryEnv } = require("./native-library-env");
 const catalog = require("../runtimes/smart-turn.json");
 
 const SAMPLE_RATE = 16000;
@@ -46,7 +47,7 @@ class DesktopSmartTurnWorker extends EventEmitter {
     super();
     this.child = require("electron").utilityProcess.fork(file, [], {
       serviceName: "KAI semantic turn detector",
-      env: { ...process.env, KAI_SMART_TURN_MODEL: workerData.modelPath },
+      env: { ...nativeLibraryEnv(), KAI_SMART_TURN_MODEL: workerData.modelPath },
     });
     this.child.on("message", value => this.emit("message", value));
     this.child.on("exit", code => this.emit("exit", code));

@@ -3,6 +3,7 @@ const fs = require("fs"), path = require("path");
 const { Worker } = require("worker_threads");
 const { EventEmitter } = require("events");
 const { downloadFile } = require("./download");
+const { nativeLibraryEnv } = require("./native-library-env");
 const catalog = require("../runtimes/kokoro.json");
 const VOICES = Object.freeze([
   { id: "af_heart", name: "Heart · warm & friendly" },
@@ -18,7 +19,7 @@ class DesktopSpeechWorker extends EventEmitter {
     super();
     this.child = require("electron").utilityProcess.fork(file, [], {
       serviceName: "KAI local voice",
-      env: { ...process.env, KAI_SPEECH_MODEL_DIR: workerData.modelDir, KAI_SPEECH_RUNTIME: workerData.runtime },
+      env: { ...nativeLibraryEnv(), KAI_SPEECH_MODEL_DIR: workerData.modelDir, KAI_SPEECH_RUNTIME: workerData.runtime },
     });
     this.child.on("message", value => this.emit("message", value));
     this.child.on("exit", code => this.emit("exit", code));

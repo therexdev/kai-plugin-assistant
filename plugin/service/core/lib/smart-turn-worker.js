@@ -1,6 +1,5 @@
 "use strict";
 
-const path = require("path");
 const { parentPort, workerData } = require("worker_threads");
 
 const port = parentPort || process.parentPort;
@@ -25,15 +24,12 @@ let ready = null;
 async function engine() {
   if (!ready) ready = (async () => {
     if (!modelPath) throw new Error("Smart-Turn model path is missing.");
-    if (process.platform === "win32") {
-      const runtime = path.join(path.dirname(require.resolve("onnxruntime-node")), "../bin/napi-v3/win32", process.arch, "onnxruntime_binding.node");
-      require("./runtimes/llamacpp").ensureCrtBeside(runtime.replace(/app\.asar([/\\])/, "app.asar.unpacked$1"));
-    }
     require("./speech-wasm").installWasmRuntime({ wasm: false });
     const ort = require("onnxruntime-node");
     const { WhisperFeatureExtractor, env } = await import("@huggingface/transformers");
     env.allowRemoteModels = false;
     env.useBrowserCache = false;
+    env.useFSCache = false;
     const extractor = new WhisperFeatureExtractor(FEATURE_CONFIG);
     const session = await ort.InferenceSession.create(modelPath, {
       executionMode: "sequential",

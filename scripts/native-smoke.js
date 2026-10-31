@@ -1,11 +1,13 @@
 "use strict";
 const { app, BrowserWindow, ipcMain, protocol } = require("electron"), fs = require("node:fs"), path = require("node:path"), os = require("node:os"), assert = require("node:assert/strict");
+const { snapshotRuntime, assertRuntimeUnchanged, readonlyRuntime } = require("./runtime-snapshot");
 const root = path.resolve(process.env.KAI_ASSISTANT_SMOKE_ROOT || path.join(__dirname, "../.build/plugin")), profile = process.env.KAI_ASSISTANT_SMOKE_PROFILE;
 assert.ok(profile && fs.statSync(profile).isDirectory(), "Run this fixture through scripts/run-native-smoke.js");
 app.setPath("userData", profile); app.disableHardwareAcceleration();
 protocol.registerSchemesAsPrivileged([{ scheme: "kai-plugin", privileges: { standard: true, secure: true } }]);
-let service, win; const lifetime = new AbortController(), settings = new Map(), state = new Map();
+let service, win, originalRuntime, restoreModes; const lifetime = new AbortController(), settings = new Map(), state = new Map();
 app.whenReady().then(async () => {
+  originalRuntime = snapshotRuntime(root); restoreModes = readonlyRuntime(root, originalRuntime);
   protocol.handle("kai-plugin", request => { const url = new URL(request.url), name = decodeURIComponent(url.pathname.slice(1)); if (url.hostname !== "kai.assistant" || name.includes("..")) return new Response("Not found", { status: 404 }); const file = path.join(root, name); if (!fs.existsSync(file) || !fs.statSync(file).isFile()) return new Response("Not found", { status: 404 }); const ext = path.extname(file), types = { ".js": "text/javascript", ".css": "text/css", ".html": "text/html", ".svg": "image/svg+xml", ".png": "image/png" }; return new Response(fs.readFileSync(file), { headers: { "content-type": types[ext] || "text/plain" } }); });
   win = new BrowserWindow({ width: 1100, height: 780, show: false, webPreferences: { preload: path.join(__dirname, "native-smoke-preload.js"), sandbox: true, contextIsolation: true, nodeIntegration: false } });
   const api = { version: 1, plugin: { id: "kai.assistant", version: JSON.parse(fs.readFileSync(path.join(root, "manifest.json"))).version, root, dataDir: path.join(profile, "assistant") }, signal: lifetime.signal,
@@ -30,6 +32,16 @@ app.whenReady().then(async () => {
   assert.equal(status.runtime, true, "Desktop companion main script is loaded");
   assert.ok((await mascot.webContents.executeJavaScript("document.querySelectorAll('script').length")) > 5);
   const response = await mascot.webContents.executeJavaScript("fetch('/core/models').then(r=>r.json())"); assert.equal(response.aliases[0].alias, "smoke-local");
-  const canvas = await mascot.webContents.capturePage(); const output = process.env.KAI_ASSISTANT_SMOKE_OUTPUT || path.join(os.tmpdir(), "kai-assistant-foundation-smoke"); fs.mkdirSync(output, { recursive: true }); fs.writeFileSync(path.join(output, "companion.png"), canvas.toPNG()); fs.writeFileSync(path.join(output, "report.json"), JSON.stringify({ passed: true, status, root }, null, 2));
-  await service.dispose({ reason: "quit" }); lifetime.abort(); win.destroy(); app.quit();
-}).catch(async error => { console.error(error.stack); try { await service?.dispose({ reason: "quit" }); } catch {} app.exit(1); });
+  // Exercise the production Electron utility process, including its real OS
+  // environment, then verify the complete signed code tree before reopening.
+  const warmed = await service.call("assistant.request", { path: "/core/turn/warm", method: "POST" }, lifetime.signal);
+  assert.equal(warmed.ok, true); assertRuntimeUnchanged(originalRuntime, snapshotRuntime(root));
+  const canvas = await mascot.webContents.capturePage(); const output = process.env.KAI_ASSISTANT_SMOKE_OUTPUT || path.join(os.tmpdir(), "kai-assistant-foundation-smoke"); fs.mkdirSync(output, { recursive: true }); fs.writeFileSync(path.join(output, "companion.png"), canvas.toPNG());
+  await service.dispose({ reason: "quit" }); assertRuntimeUnchanged(originalRuntime, snapshotRuntime(root));
+  service = require(path.join(root, "service/index.js")).create(api); await service.startBackground();
+  await service.call("assistant.native", { action: "mascot:launch", args: [{ model: "smoke-local" }] }, lifetime.signal);
+  assert.equal((await service.call("assistant.request", { path: "/core/turn/warm", method: "POST" }, lifetime.signal)).ok, true);
+  await service.dispose({ reason: "quit" }); assertRuntimeUnchanged(originalRuntime, snapshotRuntime(root));
+  fs.writeFileSync(path.join(output, "report.json"), JSON.stringify({ passed: true, status, root, nativeTurnLaunches: 2, signedRuntimeUnchanged: true }, null, 2));
+  restoreModes(); lifetime.abort(); win.destroy(); app.quit();
+}).catch(async error => { console.error(error.stack); try { await service?.dispose({ reason: "quit" }); } catch {} try { if (originalRuntime) assertRuntimeUnchanged(originalRuntime, snapshotRuntime(root)); } catch (integrityError) { console.error(integrityError.stack); } try { restoreModes?.(); } catch (restoreError) { console.error(restoreError.stack); } app.exit(1); });

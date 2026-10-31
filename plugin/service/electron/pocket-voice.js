@@ -2,6 +2,7 @@
 const fs = require("fs"), path = require("path"), crypto = require("crypto");
 const { fork } = require("child_process");
 const { downloadFile } = require("../core/lib/download");
+const { nativeLibraryEnv } = require("../core/lib/native-library-env");
 const catalog = require("../core/runtimes/pocket.json");
 const stopped = () => Object.assign(new Error("Pocket voice stopped."), { name: "AbortError" });
 function validate(request) {
@@ -49,9 +50,9 @@ class PocketVoice {
     if (this.workerFactory) return this.workerFactory(this.dir);
     const filename = path.join(__dirname, "pocket-voice-worker.js");
     if (process.versions.electron && process.type === "browser") {
-      return require("electron").utilityProcess.fork(filename, [], { serviceName: "KAI Pocket voice", env: { ...process.env, KAI_POCKET_DIR: this.dir } });
+      return require("electron").utilityProcess.fork(filename, [], { serviceName: "KAI Pocket voice", env: { ...nativeLibraryEnv(), KAI_POCKET_DIR: this.dir } });
     }
-    const child = fork(filename, [], { env: { ...process.env, KAI_POCKET_DIR: this.dir }, serialization: "advanced", stdio: ["ignore", "inherit", "inherit", "ipc"] });
+    const child = fork(filename, [], { env: { ...nativeLibraryEnv(), KAI_POCKET_DIR: this.dir }, serialization: "advanced", stdio: ["ignore", "inherit", "inherit", "ipc"] });
     child.postMessage = value => child.send(value); return child;
   }
   lease() { clearTimeout(this.idle); this.idle = setTimeout(() => { if (!this.pending) this.cancel(); else this.lease(); }, this.idleMs); this.idle.unref?.(); }

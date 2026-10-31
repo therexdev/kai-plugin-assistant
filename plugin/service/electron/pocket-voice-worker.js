@@ -7,10 +7,6 @@ let engine, sherpa, primed = new Set();
 function send(message) { port.postMessage(message); }
 async function load() {
   if (engine) return engine;
-  if (process.platform === "win32") {
-    const native = path.join(path.dirname(require.resolve("sherpa-onnx-win-x64/package.json")), "sherpa-onnx.node").replace(/app\.asar([/\\])/, "app.asar.unpacked$1");
-    require("../core/lib/runtimes/llamacpp").ensureCrtBeside(native);
-  }
   sherpa = require("sherpa-onnx-node");
   const file = name => path.join(dir, name);
   engine = await sherpa.OfflineTts.createAsync({ model: {

@@ -7,15 +7,11 @@ let ready, primed = false;
 async function engine() {
   if (!ready) ready = (async () => {
     require("./speech-wasm").installWasmRuntime({ wasm: runtime === "wasm" });
-    if (runtime !== "wasm" && process.platform === "win32") {
-      const path = require("path");
-      const runtime = path.join(path.dirname(require.resolve("onnxruntime-node")), "../bin/napi-v3/win32", process.arch, "onnxruntime_binding.node");
-      require("./runtimes/llamacpp").ensureCrtBeside(runtime.replace(/app\.asar([/\\])/, "app.asar.unpacked$1"));
-    }
     const { KokoroTTS } = await import("kokoro-js");
     const { StyleTextToSpeech2Model, AutoTokenizer, env } = await import("@huggingface/transformers");
     env.allowRemoteModels = false;
     env.useBrowserCache = false;
+    env.useFSCache = false;
     const [model, tokenizer] = await Promise.all([
       StyleTextToSpeech2Model.from_pretrained(modelDir, {
         dtype: "q8", device: "cpu", local_files_only: true,
