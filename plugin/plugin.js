@@ -10,4 +10,4 @@ window.addEventListener("kai-preferences-error", event => addMsg("error", event.
 // saved-run actions reachable from this separately installed chat window.
 window.addEventListener("kai-network-add-koin", () => activateView("buy-credits"));
 document.getElementById("network-retry-purchase").addEventListener("click", () => activateView("buy-credits"));
-const resultsButton = document.createElement("button"); resultsButton.textContent = "Research & agent results"; resultsButton.className = "small"; resultsButton.addEventListener("click", () => activateView("recovery")); document.querySelector("#view-settings .settings-card").appendChild(resultsButton);
+const resultsButton = document.createElement("button"); KaiI18n.setText(resultsButton, "Research & agent results"); resultsButton.className = "small"; resultsButton.addEventListener("click", () => activateView("recovery")); document.querySelector("#view-settings .settings-card").appendChild(resultsButton);

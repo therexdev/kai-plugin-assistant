@@ -1,4 +1,5 @@
 "use strict";
+const localeFixture = require("./i18n-fixture");
 const test = require("node:test"), assert = require("node:assert/strict"), fs = require("node:fs"), path = require("node:path"), vm = require("node:vm");
 const bridge = fs.readFileSync(path.join(__dirname, "../plugin/bridge.js"), "utf8");
 async function session(stored, original = {}) {
@@ -10,7 +11,7 @@ async function session(stored, original = {}) {
     if (method === "storage.set") { writes.push(structuredClone(input.value)); return true; }
     throw Error(method);
   }, onEvent: () => () => {} }, dispatchEvent: event => errors.push(event.detail) };
-  const context = vm.createContext({ window, Storage, localStorage, CustomEvent: class { constructor(_name, options) { this.detail = options.detail; } }, document: { readyState: "loading", addEventListener: (_name, callback) => listeners.push(callback) } });
+  const context = vm.createContext({ KaiI18n: localeFixture,  window, Storage, localStorage, CustomEvent: class { constructor(_name, options) { this.detail = options.detail; } }, document: { readyState: "loading", addEventListener: (_name, callback) => listeners.push(callback) } });
   vm.runInContext(bridge, context);
   await window.kaiAssistantPreferencesReady; await new Promise(setImmediate);
   return { writes, errors, localStorage, listeners, flush: () => new Promise(setImmediate) };

@@ -1,4 +1,5 @@
 "use strict";
+const localeFixture = require("./i18n-fixture");
 const test = require("node:test"), assert = require("node:assert/strict"), fs = require("node:fs"), path = require("node:path"), vm = require("node:vm");
 const read = file => fs.readFileSync(path.join(__dirname, "../plugin", file), "utf8");
 const app = read("app.js"), extras = read("assistant-extras.js");
@@ -8,7 +9,7 @@ const tick = () => new Promise(setImmediate);
 
 test("tool consent stays pending and preserves cancellation without synchronous browser dialogs", async () => {
   const pending = deferred(), reviews = [];
-  const context = vm.createContext({ window: { kai: { dialogs: { confirm: (...args) => { reviews.push(args); return pending.promise; } } } } });
+  const context = vm.createContext({ KaiI18n: localeFixture,  window: { kai: { dialogs: { confirm: (...args) => { reviews.push(args); return pending.promise; } } } } });
   vm.runInContext(between(app, "function confirmTool(", "// ---- web search toggle"), context);
   let settled = false;
   const result = context.confirmTool("mcp:local:write_file", { path: "example.txt", content: "draft" }).then(value => { settled = true; return value; });
@@ -20,7 +21,7 @@ test("Analyst execution receives a resolved boolean and never an approval Promis
   for (const accepted of [false, true]) {
     const pending = deferred();
     const body = between(app, "      let allowSensitive = false;", "      const resp = creditRun");
-    const context = vm.createContext({ window: { kai: { dialogs: { confirm: () => pending.promise } } }, template: "analyst", text: "Analyze data", chatModel: "local-model" });
+    const context = vm.createContext({ KaiI18n: localeFixture,  window: { kai: { dialogs: { confirm: () => pending.promise } } }, template: "analyst", text: "Analyze data", chatModel: "local-model" });
     let settled = false;
     const result = vm.runInContext(`(async () => { ${body} return teamBody; })()`, context).then(value => { settled = true; return value; });
     await tick(); assert.equal(settled, false);
@@ -32,7 +33,7 @@ test("Analyst execution receives a resolved boolean and never an approval Promis
 test("voice setup downloads only after asynchronous approval and cancellation leaves it untouched", async () => {
   for (const accepted of [false, true]) {
     const pending = deferred(), requests = []; let statusReads = 0;
-    const context = vm.createContext({
+    const context = vm.createContext({ KaiI18n: localeFixture, 
       window: { kai: { dialogs: { confirm: () => pending.promise } } },
       voiceStatus: async () => ++statusReads === 1 ? { installable: true, downloadBytes: 123000000 } : { available: true },
       fetch: async (...args) => { requests.push(args); }, btn: { classList: { add() {}, remove() {} } }, flash() {}, setTimeout: fn => { fn(); }
@@ -47,7 +48,7 @@ test("voice setup downloads only after asynchronous approval and cancellation le
 
 test("voice button cannot open duplicate async consent and recovers from dialog errors", async () => {
   const pending = deferred(), failures = []; let click, starts = 0;
-  const context = vm.createContext({ btn: { addEventListener: (_name, callback) => { click = callback; } }, startRecording: () => { starts++; return pending.promise; }, stopRecording() {}, flash: message => failures.push(message) });
+  const context = vm.createContext({ KaiI18n: localeFixture,  btn: { addEventListener: (_name, callback) => { click = callback; } }, startRecording: () => { starts++; return pending.promise; }, stopRecording() {}, flash: message => failures.push(message) });
   const start = extras.indexOf('  btn.addEventListener("click", async () => {');
   vm.runInContext('let busy = false, rec = null;\n' + extras.slice(start, extras.indexOf("})();", start)), context);
   const first = click(); await click(); assert.equal(starts, 1);
@@ -68,7 +69,7 @@ test("closing a reopened run budget cannot reuse a previous Start approval", asy
   const document = { body: new Element(), addEventListener() {}, createElement: () => { const node = new Element(); created.push(node); return node; }, getElementById: id => { if (!nodes.has(id)) nodes.set(id, new Element()); return nodes.get(id); } };
   const bridge = { run: async (method, input) => { requests.push([method, input]); if (method === "run-open") return { run: { id: "a".repeat(64) } }; if (method === "run-list") return { runs: [] }; return {}; } };
   const window = { kaiKoinTestBridge: bridge, KaiNetwork: { refresh: async () => ({ product: "prepaid-usd-v1", activation: "ready", runBudgets: true }), selectedModel: () => null } };
-  vm.runInNewContext(read("credit-runs.js"), { window, document });
+  vm.runInNewContext(read("credit-runs.js"), { KaiI18n: localeFixture,  window, document });
   const dialog = created[0];
   const first = window.KaiCreditRuns.begin("research"); await tick(); dialog.close("start"); assert.equal(await first, true);
   await window.KaiCreditRuns.finish();

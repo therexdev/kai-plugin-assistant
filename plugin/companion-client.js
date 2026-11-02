@@ -24,7 +24,7 @@
     function paint(state) {
       if (!panel || (!state?.actions?.length && !state?.plans?.length)) return;
       panel.hidden = false; const opened = panel.open; panel.replaceChildren();
-      const summary = document.createElement("summary"); summary.textContent = "KAI actions · " + state.actions.length; panel.append(summary); panel.open = opened;
+      const summary = document.createElement("summary"); KaiI18n.setText(summary, KaiI18n.message`KAI actions · ${state.actions.length}`); panel.append(summary); panel.open = opened;
       for (const plan of state.plans || []) { const p = document.createElement("p"); p.textContent = plan.name + ": " + plan.steps.join(" → "); panel.append(p); }
       for (const action of state.actions) {
         const row = document.createElement("div"), title = document.createElement("strong"), detail = document.createElement("p");

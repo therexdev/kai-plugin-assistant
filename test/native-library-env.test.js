@@ -1,4 +1,5 @@
 "use strict";
+const localeFixture = require("./i18n-fixture");
 const test = require("node:test"), assert = require("node:assert/strict"), fs = require("node:fs"), os = require("node:os"), path = require("node:path"), vm = require("node:vm");
 const { CRT_DLLS, nativeLibraryEnv } = require("../plugin/service/core/lib/native-library-env");
 const { snapshotRuntime, assertRuntimeUnchanged } = require("../scripts/runtime-snapshot");
@@ -53,7 +54,7 @@ for (const relative of ["core/lib/speech-worker.js", "core/lib/smart-turn-worker
     };
     requireFixture.resolve = name => name === "onnxruntime-node" ? path.join(root, "node_modules/onnxruntime-node/dist/index.js") : path.join(root, "node_modules/sherpa-onnx-win-x64/package.json");
     const source = fs.readFileSync(path.join(__dirname, "../plugin/service", relative), "utf8");
-    vm.runInNewContext(source, { require: requireFixture, process: { platform: "win32", arch: "x64", env: { KAI_POCKET_DIR: root }, parentPort: port, cpuUsage: () => ({ user: 0, system: 0 }) }, module: { exports: {} }, Buffer, performance, console, setTimeout, clearTimeout }, { filename: relative });
+    vm.runInNewContext(source, { KaiI18n: localeFixture,  require: requireFixture, process: { platform: "win32", arch: "x64", env: { KAI_POCKET_DIR: root }, parentPort: port, cpuUsage: () => ({ user: 0, system: 0 }) }, module: { exports: {} }, Buffer, performance, console, setTimeout, clearTimeout }, { filename: relative });
     const value = { id: 1, type: "warm", voice: "fixture" };
     await listeners.get("message")(relative.startsWith("electron/") ? { data: value } : value);
     assert.equal(reachedNative, true); assert.ok(messages.some(value => typeof value.error === "string"));

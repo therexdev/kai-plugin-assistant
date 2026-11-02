@@ -31,7 +31,7 @@
   dialog.querySelector("form").addEventListener("submit", event => {
     if (event.submitter?.value !== "start") return;
     const value = document.getElementById("credit-run-budget").value.trim();
-    if (!/^(0|[1-9]\d{0,13})(\.\d{1,5})?$/.test(value) || Number(value) <= 0) { event.preventDefault(); document.getElementById("credit-run-error").textContent = "Enter a positive total budget with up to five decimal places."; }
+    if (!/^(0|[1-9]\d{0,13})(\.\d{1,5})?$/.test(value) || Number(value) <= 0) { event.preventDefault(); KaiI18n.setText(document.getElementById("credit-run-error"), "Enter a positive total budget with up to five decimal places."); }
   });
   async function dispatch(request) {
     if (!active) return bridge.run("chat-completion", request);
@@ -53,17 +53,17 @@
     return Promise.resolve(new Response(stream, { headers: { "content-type": "text/event-stream" } }));
   }
   async function show(id, target) {
-    target.textContent = "Recovering saved results…";
+    KaiI18n.setText(target, "Recovering saved results…");
     try {
       const result = await bridge.run("run-status", id); target.replaceChildren();
-      const summary = document.createElement("p"); summary.textContent = `${result.run.state} · ${credits(result.run.spent)} credits used · total budget ${credits(result.run.maxTotal)} credits`; target.appendChild(summary);
+      const summary = document.createElement("p"); KaiI18n.setText(summary, KaiI18n.message`${result.run.state} · ${credits(result.run.spent)} credits used · total budget ${credits(result.run.maxTotal)} credits`); target.appendChild(summary);
       if (result.run.state === "open") {
-        const stopSaved = document.createElement("button"); stopSaved.textContent = "Stop this saved run";
+        const stopSaved = document.createElement("button"); KaiI18n.setText(stopSaved, "Stop this saved run");
         stopSaved.addEventListener("click", async () => { stopSaved.disabled = true; try { await bridge.run("run-stop", id); await show(id, target); } catch (e) { stopSaved.disabled = false; summary.textContent = e.message; } });
         target.appendChild(stopSaved);
       }
-      for (const [index, step] of result.steps.entries()) { const label = document.createElement("strong"), text = document.createElement("pre"); label.textContent = `Saved result ${index + 1} · ${credits(step.credits)} credits`; text.textContent = step.text; text.style.whiteSpace = "pre-wrap"; target.append(label, text); }
-      if (!result.steps.length) { const empty = document.createElement("p"); empty.textContent = "No delivered results are saved for this run."; target.appendChild(empty); }
+      for (const [index, step] of result.steps.entries()) { const label = document.createElement("strong"), text = document.createElement("pre"); KaiI18n.setText(label, KaiI18n.message`Saved result ${index + 1} · ${credits(step.credits)} credits`); text.textContent = step.text; text.style.whiteSpace = "pre-wrap"; target.append(label, text); }
+      if (!result.steps.length) { const empty = document.createElement("p"); KaiI18n.setText(empty, "No delivered results are saved for this run."); target.appendChild(empty); }
     } catch (e) { target.textContent = e.message; }
   }
   async function history() {
@@ -72,10 +72,10 @@
       const result = await bridge.run("run-list"); host.replaceChildren();
       for (const run of result.runs) {
         const row = document.createElement("details"), title = document.createElement("summary"), body = document.createElement("div");
-        title.textContent = `${run.mode} · ${new Date(run.createdAt).toLocaleString()} · ${credits(run.maxTotal)} credit ceiling`; row.append(title, body); host.appendChild(row);
+        KaiI18n.setText(title, KaiI18n.message`${run.mode} · ${new Date(run.createdAt).toLocaleString()} · ${credits(run.maxTotal)} credit ceiling`); row.append(title, body); host.appendChild(row);
         row.addEventListener("toggle", () => { if (row.open) show(run.id, body); });
       }
-      if (!result.runs.length) host.textContent = "No saved runs for this account and network.";
+      if (!result.runs.length) KaiI18n.setText(host, "No saved runs for this account and network.");
     } catch (e) { host.textContent = e.message; }
   }
   async function finish() {
@@ -83,11 +83,7 @@
     await bridge.run("run-stop", id).catch(() => {}); await history(); window.KaiCredits?.refresh();
   }
   function paintCost() {
-    document.getElementById("credit-run-cost").textContent = document.getElementById("credit-run-free-only").checked
-      ? "This run uses free credits only, up to the total budget."
-      : window.KaiNetwork.paidFirst?.() === true
-        ? "Purchased credits are used first, then eligible free credits, up to this total budget."
-        : "Free credits are used first. Purchased credits may cover the rest, up to this total budget.";
+    KaiI18n.setText(document.getElementById("credit-run-cost"), (document.getElementById("credit-run-free-only").checked ? "This run uses free credits only, up to the total budget." : (window.KaiNetwork.paidFirst?.() === true ? "Purchased credits are used first, then eligible free credits, up to this total budget." : "Free credits are used first. Purchased credits may cover the rest, up to this total budget.")));
   }
   document.getElementById("credit-run-free-only").addEventListener("change", paintCost);
   saved.addEventListener("toggle", () => { if (saved.open) history(); });

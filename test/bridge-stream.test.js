@@ -1,4 +1,5 @@
 "use strict";
+const localeFixture = require("./i18n-fixture");
 const { test } = require("node:test"), assert = require("node:assert/strict"), fs = require("node:fs"), path = require("node:path"), vm = require("node:vm");
 const { webcrypto } = require("node:crypto"), { getEventListeners } = require("node:events");
 const source = fs.readFileSync(path.join(__dirname, "../plugin/bridge.js"), "utf8");
@@ -6,7 +7,7 @@ function fixture(call) {
   const calls = [];
   class Storage { constructor() { this.values = new Map(); } getItem(key) { return this.values.get(key) ?? null; } setItem(key, value) { this.values.set(key, String(value)); } removeItem(key) { this.values.delete(key); } }
   const window = { kai: { call: async (method, input) => { if (method === "storage.get") return null; if (method === "storage.set") return true; calls.push({ method, input }); return call(method, input); }, onEvent: () => () => {} }, dispatchEvent() {} };
-  vm.runInNewContext(source, { window, Storage, localStorage: new Storage(), document: { readyState: "loading", addEventListener() {} },
+  vm.runInNewContext(source, { KaiI18n: localeFixture,  window, Storage, localStorage: new Storage(), document: { readyState: "loading", addEventListener() {} },
     Headers, Response, ReadableStream, TextEncoder, Uint8Array, ArrayBuffer, Blob, DOMException, crypto: webcrypto, btoa, atob,
     setTimeout: (fn, ms) => setTimeout(fn, Math.min(ms, 2)), clearTimeout });
   return { fetch: window.fetch, calls };

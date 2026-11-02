@@ -18,7 +18,7 @@
         host.dataset.kaiMounted = "ready";
       }
     } catch {
-      for (const host of hosts) { host.textContent = "KAI"; delete host.dataset.kaiMounted; }
+      for (const host of hosts) { KaiI18n.setText(host, "KAI"); delete host.dataset.kaiMounted; }
     }
   }
   window.kaiBrand = { mountCharacters };

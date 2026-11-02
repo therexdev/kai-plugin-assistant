@@ -121,7 +121,7 @@ async function loadVersion() {
     if (h.version) KaiI18n.setText($("app-version"), KaiI18n.message`${h.productName || "Koinos AI"} v${h.version}`);
     document.body.dataset.releaseChannel = h.channel || "stable";
     if (h.channel === "test") {
-      document.title = "Koinos AI Test";
+      KaiI18n.setAttr(document, "title", "Koinos AI Test");
       const title = document.querySelector(".tb-title");
       if (title) KaiI18n.setText(title, "Koinos AI Test");
     }
@@ -190,7 +190,7 @@ async function askModelOnce(messages, model) {
 function confirmTool(name, args) {
   const pretty = name.replace(/^mcp:[^:]+:/, "");
   const detail = Object.entries(args || {}).map(([k, v]) => `${k}: ${String(v).slice(0, 120)}`).join("\n");
-  return window.kai.dialogs.confirm(`The AI wants to use a tool:\n\n${pretty}\n${detail ? "\n" + detail + "\n" : ""}\nAllow it this once?`, { title: "Allow this tool?", confirmLabel: "Allow once" });
+  return window.kai.dialogs.confirm(KaiI18n.t(KaiI18n.message`The AI wants to use a tool:\n\n${pretty}\n${detail ? "\n" + detail + "\n" : ""}\nAllow it this once?`), { title: "Allow this tool?", confirmLabel: "Allow once" });
 }
 
 // ---- web search toggle (persisted like other renderer prefs) ----
@@ -363,13 +363,13 @@ async function updateModelPick(aliases) {
     if (KaiProviders.desktop) for (const p of KaiProviders.status.providers) {
       const o = document.createElement("option"); o.value = p.id;
       const why = !KaiProviders.status.available || KaiProviders.status.locked ? "unlock secure storage" : !p.configured ? "connect in Settings" : KaiProviders.status.blocked ? "blocked by Local-Only" : !p.models.length ? "refresh models in Settings" : "";
-      o.textContent = p.label + " · Desktop" + (why ? " — " + why : ""); o.disabled = !!why; src.appendChild(o);
+      KaiI18n.setText(o, KaiI18n.message`${p.label} · Desktop${why ? KaiI18n.message` — ${KaiI18n.message([why])}` : ""}`); o.disabled = !!why; src.appendChild(o);
     }
     if (!networkEligible && netBlockedWhy) {
       // Visible but not selectable — the network exists; here's how to get it.
       const o = document.createElement("option");
       o.value = "network"; o.disabled = true;
-      KaiI18n.setText(o, KaiI18n.message`Koinos Network — ${netBlockedWhy}`);
+      KaiI18n.setText(o, KaiI18n.message`Koinos Network — ${KaiI18n.message([netBlockedWhy])}`);
       src.appendChild(o);
     }
     if ([...src.options].some((o) => o.value === prevSrc)) src.value = prevSrc;
@@ -438,7 +438,7 @@ async function fillNetworkModelPick() {
       if (selected && !options.some(o => o.value === selected)) options.push({ value: selected, label: selected.replace(/^koinos-network:/, ""), available: false });
       const sig = "paid-catalog:" + JSON.stringify(options);
       if (pick.dataset.sig !== sig) {
-        pick.replaceChildren(...options.map(m => { const o = document.createElement("option"); o.value = m.value; o.textContent = m.label + (m.available ? "" : " · Unavailable"); o.disabled = !m.available; return o; }));
+        pick.replaceChildren(...options.map(m => { const o = document.createElement("option"); o.value = m.value; KaiI18n.setText(o, KaiI18n.message`${m.label}${m.available ? "" : " · Unavailable"}`); o.disabled = !m.available; return o; }));
         pick.value = selected;
         pick.dataset.sig = sig;
       }
@@ -447,7 +447,7 @@ async function fillNetworkModelPick() {
     }
     const model = KaiNetwork.info.model;
     pick.replaceChildren();
-    if (model) { const option = document.createElement("option"); option.value = model; option.textContent = model + (["prepaid-v1", "prepaid-usd-v1"].includes(KaiNetwork.info.product) ? " · credits" : " · KOIN"); pick.appendChild(option); }
+    if (model) { const option = document.createElement("option"); option.value = model; KaiI18n.setText(option, KaiI18n.message`${model}${["prepaid-v1", "prepaid-usd-v1"].includes(KaiNetwork.info.product) ? " · credits" : " · KOIN"}`); pick.appendChild(option); }
     pick.dataset.sig = "paid:" + model; return;
   }
   let net = { workersOnline: 0, models: [] };
@@ -479,7 +479,7 @@ function updateProviderNote() {
   const source = $("src-pick").value, note = $("privacy-note");
   if (["openai", "anthropic"].includes(source)) {
     note.dataset.mode = "desktop:" + source;
-    KaiI18n.setText(note, KaiProviders.status.blocked ? "Local-Only blocks this online connection." : `Chat goes directly to ${source === "openai" ? "OpenAI" : "Anthropic"}. Your API account pays for usage.`);
+    KaiI18n.setText(note, (KaiProviders.status.blocked ? "Local-Only blocks this online connection." : KaiI18n.message`Chat goes directly to ${source === "openai" ? "OpenAI" : "Anthropic"}. Your API account pays for usage.`));
   }
 }
 window.addEventListener("kai-providers-changed", () => { $("model-pick").dataset.sig = ""; refresh(); });
@@ -562,18 +562,18 @@ async function renderOnboarding(entry) {
       const hw = h.hardware || {};
       const gpu = hw.gpus?.[0];
       const gpuSummary = gpu
-        ? `${gpu.name}${gpu.vramMb ? ` · ${(gpu.vramMb / 1024).toFixed(0)} GB VRAM` : ""}`
+        ? KaiI18n.literal(`${gpu.name}${gpu.vramMb ? ` · ${(gpu.vramMb / 1024).toFixed(0)} GB VRAM` : ""}`)
         : hw.capabilities?.metalEligible
           ? "Apple Silicon · Metal acceleration"
           : "None detected — running on CPU";
       const rows = [
-        ["System", `${hw.platform ?? "?"} · ${hw.arch ?? "?"}`],
-        ["CPU", `${hw.cpu?.model ?? "?"} (${hw.cpu?.cores ?? "?"} threads)`],
+        ["System", KaiI18n.literal(`${hw.platform ?? "?"} · ${hw.arch ?? "?"}`)],
+        ["CPU", KaiI18n.message`${hw.cpu?.model ?? "?"} (${hw.cpu?.cores ?? "?"} threads)`],
         ["Memory", hw.ramBytes ? `${(hw.ramBytes / 1e9).toFixed(0)} GB` : "?"],
         ["GPU", gpuSummary],
       ];
       $("hw-summary").innerHTML = rows
-        .map(([k, v]) => KaiI18n.html`<span class="k">${k}</span><span>${esc(v)}</span>`)
+        .map(([k, v]) => KaiI18n.html`<span class="k">${KaiI18n.content(k)}</span><span>${KaiI18n.content(v)}</span>`)
         .join("");
     } catch {
       /* health shows up on the next poll */
@@ -601,9 +601,7 @@ function showProgress(pct, done, total) {
   $("download-progress").hidden = false;
   $("btn-download").disabled = true;
   $("bar-fill").style.width = pct != null ? `${pct}%` : "12%";
-  KaiI18n.setText($("bar-label"), pct != null
-      ? `${pct}% · ${(done / 1e6).toFixed(0)} / ${(total / 1e6).toFixed(0)} MB`
-      : "Preparing…");
+  KaiI18n.setText($("bar-label"), (pct != null ? KaiI18n.message`${pct}% · ${(done / 1e6).toFixed(0)} / ${(total / 1e6).toFixed(0)} MB` : "Preparing…"));
 }
 
 function onboardError(msg) {
@@ -642,7 +640,7 @@ function addMsg(role, text) {
   // human only needs to know it's there.
   if (role === "user" && text.startsWith("📎 ")) {
     div.classList.add("msg-file");
-    div.title = "Attached file (sent to the model in full) — click to expand";
+    KaiI18n.setAttr(div, "title", "Attached file (sent to the model in full) — click to expand");
     div.addEventListener("click", () => div.classList.toggle("expanded"));
   }
   if (role === "assistant" && text) attachMsgActions(div);
@@ -820,7 +818,7 @@ async function send(replayText) {
       let allowSensitive = false;
       if (template === "analyst") {
         allowSensitive = await window.kai.dialogs.confirm(
-          "The Analyst team writes and runs code in the sandbox (its own scratch folder, no network, no other programs). Allow for this run?",
+          KaiI18n.t(KaiI18n.message(["The Analyst team writes and runs code in the sandbox (its own scratch folder, no network, no other programs). Allow for this run?"])),
           { title: "Allow Analyst code execution?", confirmLabel: "Allow for this run" }
         );
       }
@@ -1000,16 +998,12 @@ async function send(replayText) {
       const cls = servedModel ? state.aliasLabels?.[servedModel] || servedModel : null;
       const tag = document.createElement("div");
       tag.className = "route-tag";
-      KaiI18n.setText(tag, !chatModel.startsWith("koinos-network")
-        ? `answered via Koinos Network${cls ? ` (${cls})` : ""} — local model was unavailable`
-        : cls
-          ? `served by the network's ${cls}`
-          : "");
+      KaiI18n.setText(tag, (!chatModel.startsWith("koinos-network") ? KaiI18n.message`answered via Koinos Network${cls ? ` (${cls})` : ""} — local model was unavailable` : (cls ? KaiI18n.message`served by the network's ${cls}` : "")));
       if (tag.textContent) bubble.appendChild(tag);
     }
     if (KaiProviders.isModel(chatModel)) {
       const tag = document.createElement("div"); tag.className = "route-tag";
-      tag.textContent = "Answered by " + KaiProviders.label(chatModel) + " · private desktop connection"; bubble.appendChild(tag);
+      KaiI18n.setText(tag, KaiI18n.message`Answered by ${KaiProviders.label(chatModel)} · private desktop connection`); bubble.appendChild(tag);
     }
     if (webCitations) renderCitations(bubble, webCitations);
     // Speed transparency (field request): show how long the wait actually
@@ -1020,7 +1014,7 @@ async function send(replayText) {
       const tokPerSec = acc.length / 4 / genS; // ~4 chars/token estimate
       const meta = document.createElement("div");
       meta.className = "msg-meta";
-      KaiI18n.setText(meta, resp.headers.get("x-kai-buffered") === "true" ? `Verified answer in ${firstS.toFixed(1)}s` : KaiI18n.message`first reply in ${firstS.toFixed(1)}s · ~${tokPerSec.toFixed(0)} tok/s`);
+      KaiI18n.setText(meta, (resp.headers.get("x-kai-buffered") === "true" ? KaiI18n.message`Verified answer in ${firstS.toFixed(1)}s` : KaiI18n.literal(KaiI18n.message`first reply in ${firstS.toFixed(1)}s · ~${tokPerSec.toFixed(0)} tok/s`)));
       bubble.appendChild(meta);
     }
     state.history.push({ role: "assistant", content: acc, ...(webCitations ? { citations: webCitations } : {}) });
@@ -1148,7 +1142,7 @@ function renderChatList() {
     (c) => !q || c.title.toLowerCase().includes(q) || (c.searchText || "").toLowerCase().includes(q)
   );
   if (!rows.length) {
-    host.innerHTML = KaiI18n.html`<div class="chat-list-empty">${q ? "No chats match." : "Chats you start appear here."}</div>`;
+    host.innerHTML = KaiI18n.html`<div class="chat-list-empty">${KaiI18n.content(q ? "No chats match." : "Chats you start appear here.")}</div>`;
     return;
   }
   host.innerHTML = rows
@@ -1285,7 +1279,7 @@ refreshChatList();
 function esc(s) { return String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`); }
 function showView(name) {
   for (const view of document.querySelectorAll('.view')) view.hidden = view.id !== 'view-' + name;
-  $('workspace-title').textContent = name === 'settings' ? 'Settings' : name === 'recovery' ? 'Saved results' : 'Chat with KAI';
+  KaiI18n.setText($('workspace-title'), (name === 'settings' ? 'Settings' : (name === 'recovery' ? 'Saved results' : 'Chat with KAI')));
   const selected = name === 'settings' || name === 'recovery' ? 'settings' : 'chat';
   for (const button of document.querySelectorAll('.assistant-nav [data-view]')) {
     const active = button.dataset.view === selected;

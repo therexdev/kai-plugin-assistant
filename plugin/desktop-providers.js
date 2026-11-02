@@ -90,8 +90,8 @@
     for (const p of current.providers) {
       const card = document.getElementById("provider-" + p.id);
       if (!card) continue;
-      KaiI18n.setText(card.querySelector("[data-provider-state]"), p.configured ? `Key saved · ${p.models.length} model${p.models.length === 1 ? "" : "s"}` : "Not connected");
-      card.querySelector("input[type=password]").placeholder = p.configured ? "Saved securely · enter a replacement key" : "Paste your API key";
+      KaiI18n.setText(card.querySelector("[data-provider-state]"), p.configured ? KaiI18n.message`Key saved · ${p.models.length} models` : "Not connected");
+      KaiI18n.setAttr(card.querySelector("input[type=password]"), "placeholder", (p.configured ? "Saved securely · enter a replacement key" : "Paste your API key"));
       for (const b of card.querySelectorAll("button")) b.disabled = !current.available || current.locked ||
         (["refresh", "use"].includes(b.dataset.providerAction) && (!p.configured || current.blocked)) ||
         (b.dataset.providerAction === "remove" && !p.configured) || (b.dataset.providerAction === "use" && !p.models.length);

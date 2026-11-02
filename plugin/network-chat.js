@@ -2,7 +2,7 @@
 (() => {
   const bridge = window.kaiKoinTestBridge;
   let info = { configured: false }, pending, availabilityTimer;
-  const progress = text => { const node = document.getElementById("network-chat-status"); if (node) { node.textContent = text; node.dataset.source = "chat"; } };
+  const progress = text => { const node = document.getElementById("network-chat-status"); if (node) { KaiI18n.setText(node, text); node.dataset.source = "chat"; } };
   const amount = value => { const n = BigInt(value); return `${n / 100000000n}.${(n % 100000000n).toString().padStart(8, "0")}`; };
   const alias = value => String(value || "").replace(/^koinos-network:/, "");
   const paidFirstPreference = () => localStorage.getItem("kai-credit-paid-first") === "true";
@@ -13,16 +13,9 @@
     toggle.checked = info.freeOnlySession === true ? false : paidFirstPreference();
     // A saved preference can always be turned off, even during an outage.
     toggle.disabled = info.freeOnlySession === true || !supported && !toggle.checked;
-    help.textContent = info.deviceFree === true ? "Free credits are ready to use. Buying credits connects your KOIN wallet."
-      : info.freeOnlySession === true ? "This temporary connection uses free credits only. Your saved credit priority applies again when you reconnect with protected storage."
-      : supported ? (toggle.checked
-      ? "Purchased credits are used first. Eligible free credits cover the rest when needed. Your choice is saved on this computer."
-      : "Free credits are used first on eligible models, then purchased credits. Your choice is saved on this computer.")
-      : toggle.checked ? "Paid-first is saved, but network support is unavailable. Turn it off to use free credits first."
-      : ["signin-required", "wallet-connection-required", "wallet-reauthorization-required", "secure-storage-required"].includes(info.activation) ? "Free credits are used first. Connect your wallet in Credits to check your available credit options."
-      : "Free credits are used first. Paid-first will be available after the network service update.";
+    KaiI18n.setText(help, (info.deviceFree === true ? "Free credits are ready to use. Buying credits connects your KOIN wallet." : (info.freeOnlySession === true ? "This temporary connection uses free credits only. Your saved credit priority applies again when you reconnect with protected storage." : (supported ? (toggle.checked ? "Purchased credits are used first. Eligible free credits cover the rest when needed. Your choice is saved on this computer." : "Free credits are used first on eligible models, then purchased credits. Your choice is saved on this computer.") : (toggle.checked ? "Paid-first is saved, but network support is unavailable. Turn it off to use free credits first." : (["signin-required", "wallet-connection-required", "wallet-reauthorization-required", "secure-storage-required"].includes(info.activation) ? "Free credits are used first. Connect your wallet in Credits to check your available credit options." : "Free credits are used first. Paid-first will be available after the network service update."))))));
     const chatHelp = document.getElementById("network-chat-help");
-    if (chatHelp && info.maxRequestCredits) chatHelp.textContent = `Send a message to use your credits. ${info.deviceFree ? "Free credits are used automatically." : info.freeOnlySession ? "This temporary connection uses free credits only." : toggle.checked ? "Purchased credits are used first." : "Free credits are used first."} Up to ${info.maxRequestCredits} credits per message.`;
+    if (chatHelp && info.maxRequestCredits) KaiI18n.setText(chatHelp, KaiI18n.message`Send a message to use your credits. ${info.deviceFree ? "Free credits are used automatically." : info.freeOnlySession ? "This temporary connection uses free credits only." : toggle.checked ? "Purchased credits are used first." : "Free credits are used first."} Up to ${info.maxRequestCredits} credits per message.`);
   }
   function paidFirst() {
     if (info.freeOnlySession === true) return false;
@@ -43,8 +36,7 @@
     if (!visible) return;
     if (info.blocked) { node.textContent = info.blocked; return; }
     const model = selectedModel();
-    node.textContent = model ? `${model.label || model.model} · ${!availabilityFresh() ? "Checking availability" : model.available ? "Available" : "Unavailable"} · ${model.inputCreditsPerMillion} input / ${model.outputCreditsPerMillion} output credits per million tokens`
-      : "This selected model is unavailable. Choose another network model.";
+    KaiI18n.setText(node, (model ? KaiI18n.message`${model.label || model.model} · ${!availabilityFresh() ? "Checking availability" : model.available ? "Available" : "Unavailable"} · ${model.inputCreditsPerMillion} input / ${model.outputCreditsPerMillion} output credits per million tokens` : "This selected model is unavailable. Choose another network model."));
   }
   async function refresh() {
     if (!bridge) return info;
@@ -134,7 +126,7 @@
       const n = BigInt(result.koin?.receipt?.usage?.amount || "0");
       const credits = `${n / 100000n}.${(n % 100000n).toString().padStart(5, "0")}`.replace(/\.?0+$/, "") || "0";
       frame({ model: "koinos-network", servedModel: result.servedModel, choices: [{ delta: { content: output.slice(prefix.length) } }], warning: `${credits} credits` });
-      controller.enqueue(encoder.encode("data: [DONE]\n\n")); finished = true; controller.close(); progress(`${credits} credits`);
+      controller.enqueue(encoder.encode("data: [DONE]\n\n")); finished = true; controller.close(); progress(KaiI18n.message`${credits} credits`);
     }).catch(error => {
       if (!finished) { finished = true; controller.error(error); progress(String(error.message || "Stream interrupted. Your saved reply can be recovered.")); }
     }).finally(cleanup);
@@ -170,12 +162,12 @@
       const unavailable = network && (info.product !== "prepaid-usd-v1" || info.activation !== "ready" || info.runBudgets !== true || !!info.blocked);
       for (const option of pick?.options || []) {
         if (option.value === "chat") continue;
-        if (unavailable) { if (!option.dataset.creditDisabled) option.dataset.creditDisabled = String(option.disabled); option.disabled = true; option.title = "This network has not activated shared credit run budgets."; }
+        if (unavailable) { if (!option.dataset.creditDisabled) option.dataset.creditDisabled = String(option.disabled); option.disabled = true; KaiI18n.setAttr(option, "title", "This network has not activated shared credit run budgets."); }
         else if (option.dataset.creditDisabled !== undefined) { option.disabled = option.dataset.creditDisabled === "true"; delete option.dataset.creditDisabled; option.title = ""; }
       }
       for (const id of ["btn-pg-run", "btn-dev-run"]) {
         const button = document.getElementById(id); if (!button) continue;
-        if (unavailable) { if (button.dataset.creditDisabled === undefined) button.dataset.creditDisabled = String(button.disabled); button.disabled = true; button.title = "Shared network run budgets are unavailable. Choose a local route."; }
+        if (unavailable) { if (button.dataset.creditDisabled === undefined) button.dataset.creditDisabled = String(button.disabled); button.disabled = true; KaiI18n.setAttr(button, "title", "Shared network run budgets are unavailable. Choose a local route."); }
         else if (button.dataset.creditDisabled !== undefined) { button.disabled = button.dataset.creditDisabled === "true"; delete button.dataset.creditDisabled; button.title = ""; }
       }
       if (pick?.selectedOptions[0]?.disabled && network) { pick.value = "chat"; pick.dispatchEvent(new Event("change")); }

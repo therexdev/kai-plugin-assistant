@@ -55,10 +55,17 @@ app.whenReady().then(async () => {
   }
   assert.ok(mascot, "Open KAI launches the desktop companion through the rendered button");
   await mascot.webContents.executeJavaScript("window.kaiLanguageReady");
-  changeLanguage("es");
-  await new Promise(resolve => setTimeout(resolve, 100));
-  for (const window of [win, mascot]) assert.equal(await window.webContents.executeJavaScript("document.documentElement.lang"), "es", "Launcher and companion follow Core");
-  changeLanguage("en");
+  // Check the served companion catalog, not only the HTML language attribute.
+  const catalog = await mascot.webContents.executeJavaScript("fetch('/locales/ui.js').then(async r=>({ok:r.ok,type:r.headers.get('content-type'),body:await r.text()}))");
+  assert.equal(catalog.ok, true); assert.match(catalog.type, /javascript/); assert.match(catalog.body, /KaiLocaleCatalogs/);
+  await mascot.webContents.executeJavaScript("document.getElementById('question').value='Settings <script> & {0}'");
+  for (const language of ["es", "pt-BR", "fr", "de", "en"]) {
+    changeLanguage(language); await new Promise(resolve => setTimeout(resolve, 100));
+    for (const window of [win, mascot]) assert.equal(await window.webContents.executeJavaScript("document.documentElement.lang"), language, "Launcher and companion follow Core");
+    const live = await mascot.webContents.executeJavaScript("({menu:document.getElementById('menu-computer').textContent,expected:KaiI18n.t('Desktop control'),draft:document.getElementById('question').value,tryVoice:KaiI18n.t(KaiI18n.message(['Try ', ''], 'Settings'))})");
+    assert.equal(live.menu, live.expected); assert.equal(live.draft, "Settings <script> & {0}");
+    if (language !== "en") { assert.notEqual(live.menu, "Desktop control"); assert.notEqual(live.tryVoice, "Try Settings"); }
+  }
 
   await new Promise(resolve => setTimeout(resolve, 750));
   const status = await mascot.webContents.executeJavaScript(`({ runtime:performance.getEntriesByType('resource').some(r=>r.name.endsWith('/mascot.js')), model:document.querySelector('#model')?.value, body:document.body.innerText.slice(0,300), errors:document.querySelector('#connection')?.textContent })`);

@@ -63,7 +63,7 @@ function create(ctx) {
     const root = path.join(__dirname, "../../ui");
     // The base runtime has no suffix: the mascot-* asset scan below does not
     // match mascot.js. Core serves ui-core, so it cannot fall back to legacy UI.
-    const selected = new Set(["mascot.html", "mascot.js", "pocket-credits.html", "mascot.css", "kai-character.css", "kai-robot.svg", "brand-mark.svg", "markdown.js", "audio-wav.js", "agents.js", "connection-profiles.js", "companion-client.js", "desktop-providers.js", "app-navigation.js", "computer-tools.js", "i18n.js", "language-settings.js", "locales/catalogs.js", "locales/core.js"]);
+    const selected = new Set(["mascot.html", "mascot.js", "pocket-credits.html", "mascot.css", "kai-character.css", "kai-robot.svg", "brand-mark.svg", "markdown.js", "audio-wav.js", "agents.js", "connection-profiles.js", "companion-client.js", "desktop-providers.js", "app-navigation.js", "computer-tools.js", "i18n.js", "language-settings.js", "locales/catalogs.js", "locales/core.js", "locales/ui.js"]);
     for (const file of fs.readdirSync(root)) if (/^mascot[.-].*\.(js|css|html)$/.test(file)) selected.add(file);
     const walk = folder => { if (!fs.existsSync(path.join(root, folder))) return; for (const row of fs.readdirSync(path.join(root, folder), { withFileTypes: true })) { const relative = folder + "/" + row.name; if (row.isDirectory()) walk(relative); else if (row.isFile()) selected.add(relative); } };
     walk("assets");

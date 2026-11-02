@@ -121,7 +121,7 @@
     $("mascot-menu").hidden = true;
     $("mascot-menu-button").setAttribute("aria-expanded", "false");
     $("toggle-chat").setAttribute("aria-expanded", String(expanded));
-    $("toggle-chat").title = expanded ? "Minimize chat" : "Open chat";
+    KaiI18n.setAttr($("toggle-chat"), "title", (expanded ? "Minimize chat" : "Open chat"));
     regions();
     if (expanded) { wake(); setTimeout(() => $("question").focus(), 50); }
   }
@@ -139,11 +139,11 @@
     for (const id of ["mic", "quick-mic"]) {
       $(id).disabled = voicePending;
       $(id).setAttribute("aria-pressed", String(wakeEnabled && wakeListener.active));
-      $(id).setAttribute("aria-label", busy || speaking ? "Interrupt KAI and talk" : "Talk to KAI");
-      $(id).title = busy || speaking ? "Interrupt and talk" : "Talk now · no wake phrase needed";
+      KaiI18n.setAttr($(id), "aria-label", (busy || speaking ? "Interrupt KAI and talk" : "Talk to KAI"));
+      KaiI18n.setAttr($(id), "title", (busy || speaking ? "Interrupt and talk" : "Talk now · no wake phrase needed"));
     }
     $("quick-stop").hidden = !busy && !speaking && !computerActive;
-    $("quick-stop").title = computerActive ? "Stop desktop control · Ctrl+Alt+Backspace" : "Stop response";
+    KaiI18n.setAttr($("quick-stop"), "title", (computerActive ? "Stop desktop control · Ctrl+Alt+Backspace" : "Stop response"));
     KaiI18n.setText($("menu-computer"), computerActive ? "Stop desktop control ■" : "Desktop control");
     document.body.classList.toggle("computer-active", computerActive);
     KaiI18n.setText($("composer-hint"), voicePending ? "Preparing your voice…" : wakeEnabled ? "Pause to send · keep talking after replies" : "Enter to send");
@@ -162,16 +162,11 @@
     }
     const names = [active.has("screen") ? "Screen" : null, active.has("camera") ? "Camera" : null].filter(Boolean);
     $("eyes-indicator").hidden = !names.length;
-    $("eyes-indicator-copy").textContent = names.join(" + ") + (names.length > 1 ? " are on" : " is on");
+    KaiI18n.setText($("eyes-indicator-copy"), KaiI18n.message`${KaiI18n.message([names.join(" + ")])} on`);
     $("eyes-options").classList.toggle("eyes-on", !!names.length);
-    $("eyes-options").setAttribute("aria-label", names.length ? "KAI Eyes active: " + names.join(" and ") : "KAI Eyes");
+    KaiI18n.setAttr($("eyes-options"), "aria-label", (names.length ? KaiI18n.message`KAI Eyes active: ${KaiI18n.message([names.join(" and ")])}` : "KAI Eyes"));
     const target = value.sources[0];
-    KaiI18n.setText($("eyes-status"), names.length
-      ? `${names.join(" and ")} vision ${names.length > 1 ? "are" : "is"} active for ${target.label || "this brain"}. ` +
-        (target.destination === "local" ? "Frames stay on this computer." : "Fresh frames go only to your private provider when you ask KAI.")
-      : !value.available ? "KAI Eyes needs the installed desktop app."
-      : eyesCapability.vision ? `Ready for ${eyesCapability.label || "this vision brain"}. Choose a source to begin.`
-      : eyesCapability.reason || "Choose a vision-capable brain, then turn on a source.");
+    KaiI18n.setText($("eyes-status"), (names.length ? KaiI18n.message`Vision active for ${target.label || KaiI18n.message(["this brain"])}. ${KaiI18n.message([target.destination === "local" ? "Frames stay on this computer." : "Fresh frames go only to your private provider when you ask KAI."])}` : (!value.available ? "KAI Eyes needs the installed desktop app." : (eyesCapability.vision ? KaiI18n.message`Ready for ${eyesCapability.label || KaiI18n.message(["this vision brain"])}. Choose a source to begin.` : eyesCapability.reason ? KaiI18n.literal(eyesCapability.reason) : "Choose a vision-capable brain, then turn on a source."))));
   }
   async function refreshEyesCapability(model = $("model").value) {
     const serial = ++eyesCapabilitySerial;
@@ -253,15 +248,15 @@
       const choice = KaiProviders.isModel(wanted) ? wanted : api.chooseModel(data.aliases || [], data.runtime?.activeAlias, hint || requestedModel, $("model").value || read("kai-mascot-model", ""));
       $("model").replaceChildren();
       for (const a of aliases.filter(a => a.status === "ready")) {
-        const option = document.createElement("option"); option.value = a.alias; option.textContent = (a.label || a.alias) + (a.vision ? " · vision" : ""); $("model").append(option);
+        const option = document.createElement("option"); option.value = a.alias; KaiI18n.setText(option, KaiI18n.message`${a.label || a.alias}${a.vision ? KaiI18n.message([" · vision"]) : ""}`); $("model").append(option);
       }
       if (unavailableProvider) {
-        const option = document.createElement("option"); option.value = wanted; option.textContent = KaiProviders.label(wanted) + " — check Settings / Privacy";
+        const option = document.createElement("option"); option.value = wanted; KaiI18n.setText(option, KaiI18n.message`${KaiProviders.label(wanted)} — check Settings / Privacy`);
         $("model").append(option);
       }
       if (choice.startsWith("koinos-network")) {
         const option = document.createElement("option"); option.value = choice;
-        KaiI18n.setText(option, choice === "koinos-network" ? "Koinos Network · Auto" : "Network · " + choice.slice(15));
+        KaiI18n.setText(option, (choice === "koinos-network" ? "Koinos Network · Auto" : KaiI18n.message`Network · ${choice.slice(15)}`));
         $("model").append(option);
       }
       if (!choice) {
@@ -270,7 +265,7 @@
         KaiI18n.setText($("connection"), KaiProviders.models().length ? "Choose a brain above to start chatting." : "Your companion is ready. Add a model to chat.");
       } else {
         $("model").value = choice;
-        KaiI18n.setText($("connection"), KaiProviders.isModel(choice) ? (unavailableProvider ? "Provider unavailable — check Settings and Privacy" : "Private desktop connection · " + KaiProviders.label(choice)) : choice.startsWith("koinos-network") ? "Using your Koinos Network selection" : "Connected to your running app");
+        KaiI18n.setText($("connection"), (KaiProviders.isModel(choice) ? (unavailableProvider ? "Provider unavailable — check Settings and Privacy" : KaiI18n.message`Private desktop connection · ${KaiProviders.label(choice)}`) : (choice.startsWith("koinos-network") ? "Using your Koinos Network selection" : "Connected to your running app")));
       }
       controls(); await refreshEyesCapability(choice);
     } catch {
@@ -386,9 +381,7 @@
           wakeListener.hearOutput(value.text); playbackStarted();
         }, onMetric: metric => {
           $("pocket-metric").hidden = false;
-          $("pocket-metric").textContent = "Last sentence started in " + (metric.firstPlaybackMs / 1000).toFixed(1) + " s · " +
-            (metric.pauses ? metric.pauses + " buffering pause(s)" : "no buffering pauses") + " · " +
-            (metric.gaps ? metric.gaps + " output clock gap(s)" : "gap-free output clock") + ".";
+          KaiI18n.setText($("pocket-metric"), KaiI18n.message`Last sentence started in ${(metric.firstPlaybackMs / 1000).toFixed(1)} s · ${metric.pauses ? KaiI18n.message`${metric.pauses} buffering pause(s)` : KaiI18n.message(["no buffering pauses"])} · ${metric.gaps ? KaiI18n.message`${metric.gaps} output clock gap(s)` : KaiI18n.message(["gap-free output clock"])}.`);
         } });
         return player.finished;
       }
@@ -449,7 +442,7 @@
       // Do not retry an unavailable language/voice for every streamed sentence.
       // The text answer continues, and the next turn can speak normally.
       if (liveSession.isCurrent(scope)) liveSession.current.finishSpeech();
-      notice(error.message + " The reply is still in your chat.");
+      notice(KaiI18n.message`${error.message} The reply is still in your chat.`);
     },
   });
   function stopSpeech(scope = speech.scope, { finish = true } = {}) {
@@ -474,12 +467,12 @@
   }
   function voiceChoices() {
     const select = $("voice-choice"); select.replaceChildren();
-    const add = (value, label, disabled = false) => { const o = document.createElement("option"); o.value = value; o.textContent = label; o.disabled = disabled; select.append(o); };
-    for (const v of windowsVoices) add("windows:" + v.id, v.name + " · fast · " + v.lang);
-    for (const v of pocketStatus?.supported ? pocketStatus.voices : []) add("pocket:" + v.id, v.name + (v.id === pocketStatus.defaultVoice ? " · default" : "") + " · Pocket streaming · English" + (pocketStatus.available ? "" : " · setup needed"));
-    for (const v of speechStatus?.voices || []) add("natural:" + v.id, v.name + " · natural");
+    const add = (value, label, disabled = false) => { const o = document.createElement("option"); o.value = value; KaiI18n.setText(o, label); o.disabled = disabled; select.append(o); };
+    for (const v of windowsVoices) add("windows:" + v.id, KaiI18n.message`${v.name} · fast · ${v.lang}`);
+    for (const v of pocketStatus?.supported ? pocketStatus.voices : []) add("pocket:" + v.id, KaiI18n.message`${v.name}${v.id === pocketStatus.defaultVoice ? KaiI18n.message([" · default"]) : ""} · Pocket streaming · English${pocketStatus.available ? "" : KaiI18n.message([" · setup needed"])}`);
+    for (const v of speechStatus?.voices || []) add("natural:" + v.id, KaiI18n.message`${v.name} · natural`);
     add("system", "Browser computer voice · automatic");
-    for (const v of window.speechSynthesis?.getVoices() || []) if (v.localService) add("system:" + v.voiceURI, v.name + " · browser · " + v.lang);
+    for (const v of window.speechSynthesis?.getVoices() || []) if (v.localService) add("system:" + v.voiceURI, KaiI18n.message`${v.name} · browser · ${v.lang}`);
     if (![...select.options].some(o => o.value === voiceChoice)) add(voiceChoice, voiceChoice.startsWith("natural:") ? "Selected natural voice" : "Selected computer voice · refresh voices");
     select.value = voiceChoice;
     voiceReplyUI(); voiceEngineUI();
@@ -521,26 +514,24 @@
     voiceChoices();
     $("setup-natural").disabled = !speechStatus.installable;
     KaiI18n.setText($("setup-natural"), speechStatus.available ? "Repair voices" : speechStatus.modelPresent ? "Retry natural voice" : "Get natural voices");
-    KaiI18n.setText($("natural-status"), speechStatus.setup?.state === "error" ? speechStatus.setup.error : speechStatus.available ? "Local voices are ready. Cute KAI works best with Bella. Speech stays on your computer." :
-      speechStatus.modelPresent ? "Your voices are downloaded. Retry setup to start KAI’s voice." : "Download natural voices once (" + Math.ceil((speechStatus.downloadBytes || 93000000) / 1000000) + " MB). No account or subscription needed.");
+    KaiI18n.setText($("natural-status"), (speechStatus.setup?.state === "error" ? KaiI18n.literal(speechStatus.setup.error) : (speechStatus.available ? "Local voices are ready. Cute KAI works best with Bella. Speech stays on your computer." : (speechStatus.modelPresent ? "Your voices are downloaded. Retry setup to start KAI’s voice." : KaiI18n.message`Download natural voices once (${Math.ceil((speechStatus.downloadBytes || 93000000) / 1000000)} MB). No account or subscription needed.`))));
   }
   function pocketUI() {
     const state = pocketStatus?.setup?.state, downloading = pocketStarting || state === "downloading";
     const available = !!pocketStatus?.available, supported = !!pocketStatus?.supported;
     const selected = pocketStatus?.voices?.find(v => "pocket:" + v.id === voiceChoice) || pocketStatus?.voices?.find(v => v.id === pocketStatus.defaultVoice) || pocketStatus?.voices?.[0];
-    const copy = state === "error" ? pocketStatus.setup.error : downloading ? "Downloading Pocket voices · " + (pocketStatus?.setup?.pct || 0) + "%" :
-      available ? "Ready to talk. Try a voice with your current character settings." : "One download, about " + Math.ceil((pocketStatus?.downloadBytes || 201000000) / 1000000) + " MB. Speech stays on your computer.";
+    const copy = (state === "error" ? KaiI18n.literal(pocketStatus.setup.error) : (downloading ? KaiI18n.message`Downloading Pocket voices · ${pocketStatus?.setup?.pct || 0}%` : (available ? "Ready to talk. Try a voice with your current character settings." : KaiI18n.message`One download, about ${Math.ceil((pocketStatus?.downloadBytes || 201000000) / 1000000)} MB. Speech stays on your computer.`)));
     $("pocket-controls").hidden = !supported;
     $("pocket-controls").dataset.ready = String(available);
     $("setup-pocket").disabled = !supported || downloading;
     KaiI18n.setText($("setup-pocket"), downloading ? "Downloading…" : state === "error" ? "Retry download" : available ? "Repair voices" : "Download Pocket voices");
     $("preview-pocket").hidden = !available;
-    $("preview-pocket").textContent = "Try " + (selected?.name || "Alba");
-    $("pocket-status").textContent = copy;
+    KaiI18n.setText($("preview-pocket"), KaiI18n.message`Try ${selected?.name || "Alba"}`);
+    KaiI18n.setText($("pocket-status"), copy);
     KaiI18n.setText($("pocket-card-title"), available ? "Pocket voice is ready" : downloading ? "Preparing KAI’s voice" : "Set up KAI’s Pocket voice");
     KaiI18n.setText($("pocket-card-copy"), supported ? copy : "Open Voice & listening to check Pocket voice availability.");
     $("compact-pocket").disabled = !supported || downloading;
-    KaiI18n.setText($("compact-pocket"), available && !downloading ? "Try " + (selected?.name || "Alba") : $("setup-pocket").textContent);
+    KaiI18n.setText($("compact-pocket"), (available && !downloading ? KaiI18n.message`Try ${selected?.name || "Alba"}` : KaiI18n.getText($("setup-pocket"))));
     regions();
   }
   async function loadPocket() {
@@ -621,7 +612,7 @@
   async function installNatural() {
     stopSpeech(); clearTimeout(speechSetupTimer);
     $("setup-natural").disabled = true; $("compact-natural").disabled = true;
-    const showProgress = text => { $("natural-status").textContent = text; $("natural-card-copy").textContent = text; regions(); };
+    const showProgress = text => { KaiI18n.setText($("natural-status"), text); KaiI18n.setText($("natural-card-copy"), text); regions(); };
     const failed = error => {
       clearTimeout(speechSetupTimer);
       speechStatus = { ...speechStatus, available: false, setup: { state: "error", error: error.message } };
@@ -646,7 +637,7 @@
             return;
           }
           if (Date.now() > deadline) throw new Error("Setup is taking longer than expected. Check your connection and try again.");
-          showProgress(status.setup?.state === "loading" ? "Starting KAI’s natural voice…" : "Downloading natural voices · " + (status.setup?.pct || 0) + "%");
+          showProgress((status.setup?.state === "loading" ? "Starting KAI’s natural voice…" : KaiI18n.message`Downloading natural voices · ${status.setup?.pct || 0}%`));
           speechSetupTimer = setTimeout(poll, 1200);
         } catch (error) { failed(error); }
       };
@@ -746,7 +737,7 @@
     $("voice-squeak-control").hidden = voiceTone !== "cute";
     $("voice-squeak").value = voicePitch;
     const label = voicePitch <= 6 ? "Gentle" : voicePitch >= 11 ? "Extra squeaky" : "Playful";
-    $("voice-squeak-label").textContent = label; $("voice-squeak").setAttribute("aria-valuetext", label);
+    KaiI18n.setText($("voice-squeak-label"), label); $("voice-squeak").setAttribute("aria-valuetext", KaiI18n.t(label));
   };
   squeakUI();
   $("voice-tone").addEventListener("change", () => {
@@ -765,7 +756,7 @@
     const active = wakeEnabled && wakeListener.active;
     $("wake-toggle").setAttribute("aria-pressed", String(active));
     $("quick-wake").setAttribute("aria-pressed", String(active));
-    $("quick-wake").title = active ? "Microphone on · click to turn off" : "Listen for Hey KAI";
+    KaiI18n.setAttr($("quick-wake"), "title", (active ? "Microphone on · click to turn off" : "Listen for Hey KAI"));
     document.body.classList.toggle("wake-on", active);
     $("wake-toggle").disabled = wakeStarting; $("quick-wake").disabled = wakeStarting;
     for (const id of ["mic", "quick-mic"]) $(id).setAttribute("aria-pressed", String(active));
@@ -817,7 +808,7 @@
     $("read-aloud").setAttribute("aria-pressed", String(voiceReplies));
     const name = voiceChoice.startsWith("pocket:") ? "Pocket KAI" : voiceChoice.startsWith("windows:") ? "Fast KAI" : voiceChoice.startsWith("natural:") ?
       (speechStatus?.voices?.find(v => "natural:" + v.id === voiceChoice)?.name.split(" · ")[0] || "Natural") : "Computer";
-    KaiI18n.setText($("read-aloud").querySelector("span"), voiceReplies ? name + " voice on" : "Voice replies off");
+    KaiI18n.setText($("read-aloud").querySelector("span"), (voiceReplies ? KaiI18n.message`${name} voice on` : "Voice replies off"));
   }
   async function send({ source = "typed", preflight = null } = {}) {
     const text = $("question").value.trim(); let model = $("model").value, routingNotice = "";
@@ -833,7 +824,7 @@
       model = next; $("model").value = model; write("kai-mascot-model", model);
       const label = aliases.find(a => a.alias === model)?.label || model;
       routingNotice = "Using " + label + " privately for this connected-app request.";
-      KaiI18n.setText($("connection"), model.startsWith("desktop:") ? "Private desktop connection · " + KaiProviders.label(model) : "Connected to your running app");
+      KaiI18n.setText($("connection"), (model.startsWith("desktop:") ? KaiI18n.message`Private desktop connection · ${KaiProviders.label(model)}` : "Connected to your running app"));
     }
     if (eyes.snapshot().sources.some(item => item.model !== model)) {
       await eyes.stopAll();
@@ -1021,8 +1012,7 @@
     if (!status.installable) {
       notice("Local voice input isn't available on this computer yet. You can keep typing to KAI."); return false;
     }
-    $("voice-setup-copy").textContent = "Let KAI hear you. Download the local speech engine once (" +
-      Math.round((status.downloadBytes || 156000000) / 1000000) + " MB). Your microphone audio stays on this computer.";
+    KaiI18n.setText($("voice-setup-copy"), KaiI18n.message`Let KAI hear you. Download the local speech engine once (${Math.round((status.downloadBytes || 156000000) / 1000000)} MB). Your microphone audio stays on this computer.`);
     $("voice-setup").hidden = false; regions();
     return false;
   }

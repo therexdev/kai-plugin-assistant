@@ -62,7 +62,7 @@
     }
     paintedUsd = true;
     const balance = document.getElementById("network-chat-balance"), account = document.getElementById("koin-available");
-    if (balance) balance.textContent = `${display.total} credits${display.stale ? " · last known balance" : ""}`;
+    if (balance) KaiI18n.setText(balance, KaiI18n.message`${display.total} credits${display.stale ? " · last known balance" : ""}`);
     if (account) account.textContent = display.total;
     const detail = document.getElementById("network-credit-sources");
     if (detail) detail.textContent = `${display.breakdown} · ${display.detail}`;
