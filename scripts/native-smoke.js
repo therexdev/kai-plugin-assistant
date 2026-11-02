@@ -5,12 +5,15 @@ const root = path.resolve(process.env.KAI_ASSISTANT_SMOKE_ROOT || path.join(__di
 assert.ok(profile && fs.statSync(profile).isDirectory(), "Run this fixture through scripts/run-native-smoke.js");
 app.setPath("userData", profile); app.disableHardwareAcceleration();
 protocol.registerSchemesAsPrivileged([{ scheme: "kai-plugin", privileges: { standard: true, secure: true } }]);
-let service, win, originalRuntime, restoreModes; const lifetime = new AbortController(), settings = new Map(), state = new Map();
+let service, win, originalRuntime, restoreModes; const lifetime = new AbortController(), settings = new Map(), state = new Map(), localeListeners = new Set();
+let language = "en";
+const locale = { get: () => ({ language, selected: true, direction: "ltr" }), onChange(callback) { localeListeners.add(callback); return () => localeListeners.delete(callback); } };
+function changeLanguage(value) { language = value; win.webContents.send("kai:locale-changed", locale.get()); for (const callback of localeListeners) callback(locale.get()); }
 app.whenReady().then(async () => {
   originalRuntime = snapshotRuntime(root); restoreModes = readonlyRuntime(root, originalRuntime);
   protocol.handle("kai-plugin", request => { const url = new URL(request.url), name = decodeURIComponent(url.pathname.slice(1)); if (url.hostname !== "kai.assistant" || name.includes("..")) return new Response("Not found", { status: 404 }); const file = path.join(root, name); if (!fs.existsSync(file) || !fs.statSync(file).isFile()) return new Response("Not found", { status: 404 }); const ext = path.extname(file), types = { ".js": "text/javascript", ".css": "text/css", ".html": "text/html", ".svg": "image/svg+xml", ".png": "image/png" }; return new Response(fs.readFileSync(file), { headers: { "content-type": types[ext] || "text/plain" } }); });
   win = new BrowserWindow({ width: 1100, height: 780, show: false, webPreferences: { preload: path.join(__dirname, "native-smoke-preload.js"), sandbox: true, contextIsolation: true, nodeIntegration: false } });
-  const api = { version: 1, plugin: { id: "kai.assistant", version: JSON.parse(fs.readFileSync(path.join(root, "manifest.json"))).version, root, dataDir: path.join(profile, "assistant") }, signal: lifetime.signal,
+  const api = { version: 1, plugin: { id: "kai.assistant", version: JSON.parse(fs.readFileSync(path.join(root, "manifest.json"))).version, root, dataDir: path.join(profile, "assistant") }, signal: lifetime.signal, locale,
     models: { list: () => [{ alias: "smoke-local", label: "Smoke local model", status: "ready" }], status: () => ({ state: "idle" }), ensure: async () => ({ loaded: true }), request: async () => new Response('data: {"choices":[{"delta":{"content":"Fixture reply"}}]}\n\ndata: [DONE]\n\n', { headers: { "content-type": "text/event-stream" } }) },
     network: { status: () => ({ privacyMode: "local-only" }), models: async () => ({ models: [] }), configure: async input => input, fetch: async () => { throw Error("Fixture egress blocked"); } },
     settings: { get: (key, fallback) => settings.has(key) ? settings.get(key) : fallback, set: (key, value) => settings.set(key, value) },
@@ -19,21 +22,12 @@ app.whenReady().then(async () => {
     wallet: { authorize: async () => { throw Error("Fixture payments blocked"); } },
     services: { provide: () => () => {}, call: async name => { throw Object.assign(Error("Install and enable a plugin providing " + name), { code: "SERVICE_UNAVAILABLE" }); } }, log: (level, message) => console.log(level + ": " + message) };
   fs.mkdirSync(api.plugin.dataDir, { recursive: true }); service = require(path.join(root, "service/index.js")).create(api);
-  ipcMain.handle("assistant-smoke:call", async (event, method, input) => { if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame) throw Error("Invalid fixture caller"); if (method === "storage.get") return state.get(input.key) ?? null; if (method === "storage.set") { state.set(input.key, input.value); return true; } if (method === "models.list") return api.models.list(); return service.call(method, input, lifetime.signal); });
+  ipcMain.handle("assistant-smoke:call", async (event, method, input) => { if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame) throw Error("Invalid fixture caller"); if (method === "locale.get") return locale.get(); if (method === "storage.get") return state.get(input.key) ?? null; if (method === "storage.set") { state.set(input.key, input.value); return true; } if (method === "models.list") return api.models.list(); return service.call(method, input, lifetime.signal); });
   // Simulate Core's asynchronous dialog bridge without granting any action.
   ipcMain.handle("assistant-smoke:dialog", async (event, kind, message) => { if (event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame) throw Error("Invalid fixture caller"); assert.ok(["confirm", "alert"].includes(kind)); assert.equal(typeof message, "string"); return kind === "confirm" ? false : undefined; });
   await win.loadURL("kai-plugin://kai.assistant/index.html"); win.show(); win.setContentSize(1100, 780); await service.startBackground();
-  await win.webContents.executeJavaScript(`window.kaiLanguageReady.then(() => {
-    if (document.getElementById('language-dialog').open) {
-      document.getElementById('first-language').value = 'en';
-      document.getElementById('language-continue').click();
-    }
-  })`);
-  const languageDeadline = Date.now() + 10000;
-  while (await win.webContents.executeJavaScript("document.getElementById('language-dialog').open")) {
-    assert.ok(Date.now() < languageDeadline, "First-run language choice is saved before using the launcher");
-    await new Promise(resolve => setTimeout(resolve, 50));
-  }
+  await win.webContents.executeJavaScript("window.kaiLanguageReady");
+  assert.equal(await win.webContents.executeJavaScript("document.getElementById('language-dialog') === null"), true, "Only Core owns language onboarding");
   await win.webContents.executeJavaScript("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
   await new Promise(resolve => setTimeout(resolve, 300));
   const launcher = await win.webContents.executeJavaScript(`(() => {
@@ -60,6 +54,12 @@ app.whenReady().then(async () => {
     if (!mascot) await new Promise(resolve => setTimeout(resolve, 50));
   }
   assert.ok(mascot, "Open KAI launches the desktop companion through the rendered button");
+  await mascot.webContents.executeJavaScript("window.kaiLanguageReady");
+  changeLanguage("es");
+  await new Promise(resolve => setTimeout(resolve, 100));
+  for (const window of [win, mascot]) assert.equal(await window.webContents.executeJavaScript("document.documentElement.lang"), "es", "Launcher and companion follow Core");
+  changeLanguage("en");
+
   await new Promise(resolve => setTimeout(resolve, 750));
   const status = await mascot.webContents.executeJavaScript(`({ runtime:performance.getEntriesByType('resource').some(r=>r.name.endsWith('/mascot.js')), model:document.querySelector('#model')?.value, body:document.body.innerText.slice(0,300), errors:document.querySelector('#connection')?.textContent })`);
   assert.equal(status.runtime, true, "Desktop companion main script is loaded");
