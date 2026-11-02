@@ -12,7 +12,7 @@ function create(api) {
   // Core/gateway instance, feature engine or global settings are imported.
   const gateway = { chats, network: api.network, staticAssets: runtime.staticAssets,
     get voice() { return runtime.voice; }, get speech() { return runtime.speech; }, get turn() { return runtime.turn; }, get port() { return runtime.port; } };
-  const ctx = { dataDir: api.plugin.dataDir, electron, core: { models: { aliases: () => api.models.list() }, gateway },
+  const ctx = { locale: api.locale, dataDir: api.plugin.dataDir, electron, core: { models: { aliases: () => api.models.list() }, gateway },
     get origin() { return runtime.origin(); }, mascotSession: runtime.mascotSession,
     getWindow: window, getPluginWindow: window, getWebContents: contents, getPluginWebContents: contents, isVisible: () => api.desktop.isVisible(),
     confirm: (title, detail) => api.desktop.confirm(title, typeof detail === "string" ? detail : JSON.stringify(detail, null, 2)),

@@ -2,7 +2,7 @@
 // The sandboxed UI talks only to its own installed Assistant service.
 // Assistant owns providers, conversations, speech and desktop controls.
 (() => {
-  const keys = ["kai-chat-mode", "kai-chat-source", "kai-web-search", "kai-credit-model", "kai-credit-paid-first", "kai-interface-language", "kai-chat-model-openai", "kai-chat-model-anthropic"];
+  const keys = ["kai-chat-mode", "kai-chat-source", "kai-web-search", "kai-credit-model", "kai-credit-paid-first", "kai-chat-model-openai", "kai-chat-model-anthropic"];
   const originalSet = Storage.prototype.setItem, originalRemove = Storage.prototype.removeItem;
   let preferencesReady = false, saved = {}, writing = Promise.resolve();
   const persistPreferences = () => {
@@ -41,7 +41,7 @@
   });
   window.kaiCompanionBridge = Object.freeze(Object.fromEntries(["manage", "context", "tools", "tool", "activity", "session", "cancel"].map(action => [action, (...args) => invoke("companion:" + action, ...args)])));
   window.koinosShell = Object.freeze({ launchMascot: options => invoke("mascot:launch", options), onMascotOpenView: callback => on("mascot:open-view", callback) });
-  window.kaiLanguageBridge = Object.freeze({ get: () => invoke("language:get"), save: language => invoke("language:save", language), onChanged: callback => on("shell:language-changed", callback) });
+  window.kaiLanguageBridge = Object.freeze({ get: () => window.kai.locale.get(), onChanged: callback => window.kai.locale.onChange(callback) });
   window.kaiKoinTestBridge = Object.freeze({ run: (action, input) => window.kai.call("assistant.payment", { action, input }), onProgress: callback => on("koin:chat-progress", callback) });
   window.fetch = async (path, init = {}) => {
     if (typeof path !== "string" || !path.startsWith("/core/") || path.includes("#")) throw Error("Assistant requests must use its reviewed Core APIs");

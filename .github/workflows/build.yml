@@ -2,6 +2,7 @@ name: Build Assistant Foundation payload
 on:
   push:
     branches: [main, foundation-v1]
+  pull_request:
   workflow_dispatch:
 permissions:
   contents: read

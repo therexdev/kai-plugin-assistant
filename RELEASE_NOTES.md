@@ -1,5 +1,9 @@
 # KAI Assistant 0.3.3
 
+## 0.3.4 — shared interface language (unreleased)
+
+Follows the language saved in Core Settings, including changes to open views. Supports English, Spanish, Brazilian Portuguese, French and German with offline catalogs. Core owns the first-run choice; plugin content and identifiers stay literal. Requires Core 0.7.17 or newer. Publish a newly signed package and matching catalog minimum only after the Core release; existing release assets remain unchanged.
+
 Restores the robot artwork and gradient **Open KAI** button in the upper-right corner. Buttons throughout Assistant use consistent typography, spacing, focus states and gradients while keeping the existing workspace layout.
 
 Fixes chat streams that stop updating when the model briefly has no output. Cancellation also reaches requests waiting for response headers, and late responses are cleaned up without affecting other work.

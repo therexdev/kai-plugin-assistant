@@ -24,7 +24,7 @@ function installMascotMediaConsent({ window, origin, isActive, dialog }) {
 }
 function create(ctx) {
   const origin = ctx.origin;
-  let providers, providerIPC, companionIPC, mascot, hub, starting, originalCanUse, installedCanUse, voicePolicy, disposed = false;
+  let providers, providerIPC, companionIPC, mascot, hub, starting, originalCanUse, installedCanUse, voicePolicy, unsubscribeLocale, disposed = false;
   const handles = new Map(), assets = new Map(), listeners = new Map();
   const getMainWindow = () => ctx.getPluginWindow ? ctx.getPluginWindow("kai.assistant") || null : ctx.getWindow();
   const getMainWebContents = () => disposed ? null : ctx.getWebContents ? ctx.getWebContents() : ctx.getPluginWebContents ? ctx.getPluginWebContents("kai.assistant") : getMainWindow()?.webContents;
@@ -63,7 +63,7 @@ function create(ctx) {
     const root = path.join(__dirname, "../../ui");
     // The base runtime has no suffix: the mascot-* asset scan below does not
     // match mascot.js. Core serves ui-core, so it cannot fall back to legacy UI.
-    const selected = new Set(["mascot.html", "mascot.js", "pocket-credits.html", "mascot.css", "kai-character.css", "kai-robot.svg", "brand-mark.svg", "markdown.js", "audio-wav.js", "agents.js", "connection-profiles.js", "companion-client.js", "desktop-providers.js", "app-navigation.js", "computer-tools.js", "i18n.js", "language-settings.js", "locales/catalogs.js"]);
+    const selected = new Set(["mascot.html", "mascot.js", "pocket-credits.html", "mascot.css", "kai-character.css", "kai-robot.svg", "brand-mark.svg", "markdown.js", "audio-wav.js", "agents.js", "connection-profiles.js", "companion-client.js", "desktop-providers.js", "app-navigation.js", "computer-tools.js", "i18n.js", "language-settings.js", "locales/catalogs.js", "locales/core.js"]);
     for (const file of fs.readdirSync(root)) if (/^mascot[.-].*\.(js|css|html)$/.test(file)) selected.add(file);
     const walk = folder => { if (!fs.existsSync(path.join(root, folder))) return; for (const row of fs.readdirSync(path.join(root, folder), { withFileTypes: true })) { const relative = folder + "/" + row.name; if (row.isDirectory()) walk(relative); else if (row.isFile()) selected.add(relative); } };
     walk("assets");
@@ -116,17 +116,19 @@ function create(ctx) {
       const value = service[key]; return typeof value === "function" ? value.bind(service) : value;
     } });
     companionIPC = registerCompanionIPC({ ipcMain: ipc, service: privateService, origin, getMainWindow, getMascotWindow, getTrustedWindow, ownsService: false, dialog: ctx.electron.dialog });
-    // The floating companion has its original secure preload and language UI.
-    const language = () => { const saved = require("../../ui/i18n").normalize(preferences.get("interfaceLanguage")); return { language: saved || require("../../ui/i18n").detect(ctx.electron.app.getPreferredSystemLanguages?.() || [ctx.electron.app.getLocale()]), selected: !!saved }; };
+    // The floating renderer retains its exact sender checks, while Core owns
+    // both the saved preference and the change subscription.
+    const language = () => ctx.locale.get();
     ipc.handle("shell:language", event => { if (!getTrustedWindow(event)) throw Error("Assistant language access denied"); return language(); });
-    ipc.handle("shell:set-language", (event, value) => { if (!getTrustedWindow(event)) throw Error("Assistant language access denied"); return saveLanguage(value); });
-    function saveLanguage(value) {
-      if (!require("../../ui/i18n").languages.some(l => l.code === value)) throw Error("Unsupported language");
-      preferences.get("interfaceLanguage"); preferences.set("interfaceLanguage", value);
-      for (const contents of [getMainWebContents(), getMascotWindow()?.webContents]) if (contents && !contents.isDestroyed?.()) contents.send("shell:language-changed", language());
-      return language();
-    }
-    handles.set("language:get", () => language()); handles.set("language:save", (_event, value) => saveLanguage(value));
+    handles.set("language:get", () => language());
+    const denySave = () => { throw Error("Change the shared language in Core Settings"); };
+    ipc.handle("shell:set-language", event => { if (!getTrustedWindow(event)) throw Error("Assistant language access denied"); return denySave(); });
+    handles.set("language:save", denySave);
+    unsubscribeLocale = ctx.locale.onChange(value => {
+      if (disposed) return;
+      const floating = getMascotWindow(), contents = floating?.webContents;
+      if (contents && !contents.isDestroyed() && contents.mainFrame.url === origin + "/mascot.html") contents.send("shell:language-changed", value);
+    });
   }
   return {
     startBackground: () => start(),
@@ -143,7 +145,7 @@ function create(ctx) {
     },
     async privacyChanged(mode) { if (mode === "local-only") { providers?.cancel(); await voicePolicy?.pause(); } },
     async dispose() {
-      disposed = true; companionIPC?.dispose(); providerIPC?.dispose();
+      disposed = true; unsubscribeLocale?.(); companionIPC?.dispose(); providerIPC?.dispose();
       try { mascot?.dispose(); await starting?.catch(() => {}); await voicePolicy?.dispose(); if (hub && hub.canUseModel === installedCanUse) hub.canUseModel = originalCanUse; }
       finally {
         for (const channel of ["shell:language", "shell:set-language"]) if (handles.has(channel)) ipc.removeHandler(channel);
